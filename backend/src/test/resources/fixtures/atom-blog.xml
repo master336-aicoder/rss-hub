@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/"
+      xmlns:thr="http://purl.org/syndication/thread/1.0" xml:lang="en">
+  <title type="text">Atom Example &amp; Co</title>
+  <subtitle>What happens when a feed is written by someone who read the spec</subtitle>
+  <link rel="self" type="application/atom+xml" href="https://atom.example.com/feed"/>
+  <link rel="alternate" type="text/html" href="https://atom.example.com/"/>
+  <link rel="http://example.com/whatever" href="https://spam.example.com/"/>
+  <updated>2026-10-18T10:00:00+08:00</updated>
+  <id>urn:uuid:1f2e3d4c</id>
+  <rights>CC BY 4.0</rights>
+  <entry>
+    <title type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml">Rich <b>title</b></div></title>
+    <link rel="edit" href="https://atom.example.com/api/1"/>
+    <link rel="alternate" type="text/html" href="/posts/1?q=1"/>
+    <link rel="enclosure" type="audio/mpeg" length="2048" href="https://cdn.example.com/1.mp3"/>
+    <id>tag:atom.example.com,2026:/posts/1</id>
+    <published>2026-10-18T02:00:00Z</published>
+    <updated>2026-10-18T09:00:00.500+08:00</updated>
+    <author><name>Ann</name><email>ann@example.com</email><uri>https://ann.example.com</uri></author>
+    <contributor><name>Volunteer</name></contributor>
+    <category term="tech" label="Technology"/>
+    <category term="atom"/>
+    <summary type="text">A summary with a &lt; and an &amp;</summary>
+    <content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml">
+      <p>Body <a href="../other">relative</a> and <img src="i.png" alt="i"/>.</p>
+      <iframe src="https://www.youtube.com/embed/abc"></iframe>
+    </div></content>
+    <thr:total>4</thr:total>
+  </entry>
+  <entry>
+    <title>Text content only</title>
+    <link href="https://atom.example.com/posts/2"/>
+    <id>https://atom.example.com/posts/2</id>
+    <updated>Sun, 18 Oct 2026 06:00:00 GMT</updated>
+    <content type="text">a &lt; b &amp; c &gt; d</content>
+  </entry>
+  <entry>
+    <title>No link at all</title>
+    <id>tag:atom.example.com,2026:/posts/3</id>
+    <published>2026-10-17T00:00:00Z</published>
+  </entry>
+</feed>

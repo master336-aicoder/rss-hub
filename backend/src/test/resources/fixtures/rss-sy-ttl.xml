@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+     xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+     xmlns:wfw="http://wellformedweb.org/CommentAPI/">
+  <channel>
+    <title>Syndication module and podcast namespaces</title>
+    <link>https://sy.example.com/</link>
+    <sy:updatePeriod>daily</sy:updatePeriod>
+    <sy:updateFrequency>2</sy:updateFrequency>
+    <itunes:author>The Podcaster</itunes:author>
+    <itunes:explicit>no</itunes:explicit>
+    <item>
+      <title>Episode with only itunes metadata</title>
+      <link>https://sy.example.com/e1</link>
+      <guid>https://sy.example.com/e1</guid>
+      <pubDate>2026-10-18T04:00:00Z</pubDate>
+      <enclosure url="https://cdn.example.com/e1.mp3" length="8000" type="audio/mpeg"/>
+      <itunes:duration>3600</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
+      <wfw:commentRss>https://sy.example.com/e1/comments</wfw:commentRss>
+    </item>
+    <item>
+      <title>Negative ttl feed</title>
+      <link>https://sy.example.com/e2</link>
+      <guid>e2</guid>
+      <pubDate>2026-10-17T04:00:00Z</pubDate>
+    </item>
+  </channel>
+  <ttl>0</ttl>
+</rss>

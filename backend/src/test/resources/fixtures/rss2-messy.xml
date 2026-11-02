@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- No namespace declarations at all: undeclared prefixes are the single most common real-world breakage. -->
+<rss version="2.0">
+  <channel>
+    <title>Undeclared Prefixes</title>
+    <link>/blog</link>
+    <dc:creator>The Collective</dc:creator>
+    <language>zh-cn</language>
+    <item>
+      <title>Relative link, no guid</title>
+      <link>/blog/2026/relative</link>
+      <author>robot@example.com (The Robot)</author>
+      <pubDate>Bogus, 32 Foo 2026 99:99:99 GMT</pubDate>
+      <description>Plain text description with a bare &amp; ampersand</description>
+    </item>
+    <item>
+      <dc:title>Title only in dc:title</dc:title>
+      <guid><![CDATA[]]></guid>
+      <dc:date>2026-10</dc:date>
+      <content:encoded>Escaped &lt;p&gt;markup&lt;/p&gt; in ordinary text</content:encoded>
+      <itunes:duration>1:02:03</itunes:duration>
+    </item>
+    <item>
+      <!-- An item with nothing usable: no title, no link, no guid, no date. -->
+    </item>
+    <item>
+      <title>Permalink guid, no link element</title>
+      <guid isPermaLink="true">https://blog.example.com/2026/perma</guid>
+      <pubDate>2026-10-18 09:30</pubDate>
+    </item>
+  </channel>
+</rss>

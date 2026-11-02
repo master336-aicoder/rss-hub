@@ -1,0 +1,17 @@
+const f = h => { const c = [1,3,5].map(i => parseInt(h.slice(i,i+2),16)/255).map(v => v <= 0.03928 ? v/12.92 : ((v+0.055)/1.055)**2.4); return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; };
+const cr = (a,b) => { const x=f(a), y=f(b); return ((Math.max(x,y)+0.05)/(Math.min(x,y)+0.05)); };
+const p = (a,b,label) => console.log(label.padEnd(24), a, b, cr(a,b).toFixed(2));
+p("#5a7188","#ffffff","slate on white");
+p("#5a7188","#e9f1f9","slate on canvas");
+p("#000000","#f3f8fd","black on surface-alt");
+p("#0b1a2b","#ffffff","emphasis on white");
+p("#16212e","#f3f8fd","ink on surface-alt");
+p("#16212e","#e9f1f9","ink on canvas");
+p("#16212e","#ffffff","ink on white");
+p("#4a5e75","#ffffff","ink2 on white");
+p("#4a5e75","#e9f1f9","ink2 on canvas");
+p("#546a85","#ffffff","ink3 on white");
+p("#546a85","#e9f1f9","ink3 on canvas");
+p("#546a85","#dfeaf5","ink3 on hover");
+p("#ffffff","#0067c0","white on accent");
+p("#0a3069","#e3eef9","accent-ink on wash");

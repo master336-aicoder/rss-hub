@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--
+  One machine event, as a page. The URL is the event's guid (FR-1.5), so it must stay openable even after the
+  stream has moved on — hence the outlet links: a reader who landed here subscribes to the stream, not to this row.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head th:replace="~{layout :: head(${title}, ${feeds})}"></head>
+<body>
+<div class="wrap">
+  <nav th:replace="~{layout :: nav(${site})}"></nav>
+
+  <article>
+    <h1 th:text="${event.title}">事件标题</h1>
+    <p class="meta">
+      <time th:if="${!#strings.isEmpty(event.publishedText)}" th:text="${event.publishedText}">2026-10-18</time>
+      · 来自 <a th:href="@{'/feed/' + ${event.streamSlug} + '.rss'}" th:text="${event.streamTitle}">事件流</a>
+    </p>
+
+    <p th:if="${!#strings.isEmpty(event.summary)}" th:text="${event.summary}">摘要</p>
+
+    <p th:if="${!#strings.isEmpty(event.url)}">
+      <a th:href="${event.url}" rel="noopener">原始地址</a>
+    </p>
+
+    <p class="chips" th:if="${!#lists.isEmpty(event.tags)}">
+      <span class="chip" th:each="tag : ${event.tags}" th:text="'#' + ${tag}">#tag</span>
+    </p>
+  </article>
+
+  <footer>
+    本页地址就是这条事件的永久 ID。订阅：
+    <a th:href="${site.absolute('/feed/' + event.streamSlug + '.rss')}">RSS</a> ·
+    <a th:href="${site.absolute('/feed/' + event.streamSlug + '.atom')}">Atom</a> ·
+    <a th:href="${site.absolute('/feed/' + event.streamSlug + '.json')}">JSON</a>
+  </footer>
+</div>
+</body>
+</html>

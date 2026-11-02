@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head th:replace="~{layout :: head(${title}, ${feeds})}"></head>
+<body>
+<div class="wrap">
+  <nav th:replace="~{layout :: nav(${site})}"></nav>
+
+  <article>
+    <h1 th:text="${post.title}">标题</h1>
+    <p class="meta">
+      <time th:if="${!#strings.isEmpty(publishedText)}" th:text="${publishedText}">2026-10-18</time>
+      <span th:if="${!#strings.isEmpty(updatedText) and updatedText != publishedText}">
+        更新于 <span th:text="${updatedText}">2026-10-19</span>
+      </span>
+    </p>
+
+    <!-- The stored body, already whitelisted on write (MarkdownRenderer), so utext here is the same HTML the feed
+         ships inside content:encoded. Neither path re-cleans it, which is the point of cleaning once. -->
+    <div th:utext="${post.bodyHtml}"></div>
+
+    <p class="chips" th:if="${!#lists.isEmpty(tags)}">
+      <a class="chip" th:each="tag : ${tags}"
+         th:href="${site.absolute('/tag/' + tag)}" th:text="'#' + ${tag}">#tag</a>
+    </p>
+    <p class="chips" th:if="${!#lists.isEmpty(categories)}">
+      <a class="chip" th:each="category : ${categories}"
+         th:href="${site.absolute('/category/' + category)}" th:text="${category}">分类</a>
+    </p>
+  </article>
+
+  <footer>
+    本页的地址就是这篇文章的永久 ID，改标题不会让它变。
+    订阅：<a th:href="${site.absolute('/feed.rss')}">RSS</a> ·
+    <a th:href="${site.absolute('/feed.atom')}">Atom</a> ·
+    <a th:href="${site.absolute('/feed.json')}">JSON</a>
+  </footer>
+</div>
+</body>
+</html>

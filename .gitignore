@@ -1,0 +1,27 @@
+### 本机运行产物（永不入库）
+/data/
+/err.txt
+*.log
+
+### .dev-logs 是一次性实例的工作目录（日志、临时 H2 库、探针产物）。
+### 整目录忽略，只白名单化文档里被当作"可复跑门禁"引用的脚本，否则从 clone 里照文档跑门禁会缺文件。
+/.dev-logs/*
+!/.dev-logs/smoke-run.sh
+!/.dev-logs/smoke-feed-server.js
+!/.dev-logs/f13-check2.js
+!/.dev-logs/f14-classaudit.js
+!/.dev-logs/f14-contrast2.js
+!/.dev-logs/f14-grayhunt.js
+!/.dev-logs/f15-routecheck.js
+
+### 口令与密钥：backend/dev.env 由 backend/.gitignore 挡下，这里是兜底
+.env
+.env.*
+*.env
+
+### 编辑器与系统垃圾
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

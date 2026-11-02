@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head th:replace="~{layout :: head(${title}, ${feeds})}"></head>
+<body>
+<div class="wrap">
+  <nav th:replace="~{layout :: nav(${site})}"></nav>
+
+  <ul class="posts">
+    <li class="post" th:each="entry : ${posts}">
+      <h2><a th:href="${site.absolute('/blog/' + entry.slug)}" th:text="${entry.title}">标题</a></h2>
+      <p class="meta" th:if="${!#strings.isEmpty(entry.publishedText)}"
+         th:text="${entry.publishedText}">2026-10-18</p>
+      <div th:if="${!#strings.isEmpty(entry.summaryHtml)}" th:utext="${entry.summaryHtml}">摘要</div>
+      <p class="chips" th:if="${!#lists.isEmpty(entry.tags)}">
+        <a class="chip" th:each="tag : ${entry.tags}"
+           th:href="${site.absolute('/tag/' + tag)}" th:text="'#' + ${tag}">#tag</a>
+      </p>
+    </li>
+  </ul>
+
+  <p th:if="${#lists.isEmpty(posts)}" class="meta">还没有已发布的文章。</p>
+
+  <footer>
+    共 <span th:text="${#lists.size(posts)}">0</span> 篇可见文章 ·
+    <a th:href="${site.absolute('/feed.rss')}">RSS</a>
+  </footer>
+</div>
+</body>
+</html>

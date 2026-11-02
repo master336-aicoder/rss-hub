@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"
+     xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"
+     xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <atom:link rel="self" href="https://blog.example.com/feed.xml"/>
+    <title>Example Blog</title>
+    <link>https://blog.example.com/</link>
+    <description>Notes about things, &amp; other stuff</description>
+    <language>en-us</language>
+    <ttl>30</ttl>
+    <lastBuildDate>Sun, 18 Oct 2026 09:30:00 GMT</lastBuildDate>
+    <item>
+      <title>Post &lt;b&gt;one&lt;/b&gt; &amp; friends</title>
+      <link>https://blog.example.com/2026/post-one</link>
+      <guid isPermaLink="true">https://blog.example.com/2026/post-one</guid>
+      <pubDate>Sun, 18 Oct 2026 09:00:00 +0800</pubDate>
+      <dc:creator>Wei Zhang</dc:creator>
+      <category>tech</category>
+      <category domain="https://blog.example.com/tags/java">java, jvm</category>
+      <description>A short summary with &lt;a href="/2026/post-one"&gt;a relative link&lt;/a>.</description>
+      <content:encoded><![CDATA[<p>Body with <a href="/2026/post-one#s">a fragment link</a>.</p>
+<p><img src="/img/one.png" width="640" height="200" alt="one"></p>
+<script>tracking()</script>
+<img src="https://mailchimp.com/track/open?url=x" width="1" height="1">]]></content:encoded>
+      <enclosure url="/media/one.mp3" type="audio/mpeg" length="1024"/>
+    </item>
+    <item>
+      <title>Second post</title>
+      <link>https://blog.example.com/2026/post-two</link>
+      <guid isPermaLink="false">tag:example.com,2026:/post-two</guid>
+      <pubDate>Sat, 17 Oct 2026 21:05:00 GMT</pubDate>
+      <dc:creator>A Bot (robot@example.com)</dc:creator>
+      <description><![CDATA[<p>CDATA body with markup: <em>emphasised</em></p>]]></description>
+      <media:content url="https://cdn.example.com/v.mp4" medium="video" type="video/mp4" filesize="4096"
+                     duration="120"/>
+    </item>
+  </channel>
+</rss>

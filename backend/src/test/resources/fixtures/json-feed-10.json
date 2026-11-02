@@ -1,0 +1,20 @@
+{
+  "version": "https://jsonfeed.org/version/1",
+  "title": "JSON Feed 1.0",
+  "items": [
+    {
+      "id": "1",
+      "url": "https://old.example.com/1",
+      "title": "Bare string author and plain content",
+      "author": "Old Timer",
+      "content": "<p>Both content keys existed in 1.0</p>"
+    },
+    {
+      "id": "2",
+      "url": "https://old.example.com/2",
+      "title": "Author object",
+      "author": {"name": "Ann", "url": "https://ann.example.com"},
+      "attachments": [{"url": "https://old.example.com/2.mp3", "mime_type": "audio/mpeg"}]
+    }
+  ]
+}

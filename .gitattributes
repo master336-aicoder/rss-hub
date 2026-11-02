@@ -1,0 +1,25 @@
+# 冒烟与门禁脚本必须在 Linux/macOS 上可直接 bash 执行，CRLF 会让它们在第一行就失败。
+# 无扩展名的 mvnw 同理（本机 core.autocrlf=true，不写这条就会被检出成 CRLF，Linux 上 `./mvnw` 直接报 bad interpreter）。
+*.sh text eol=lf
+mvnw text eol=lf
+*.cmd text eol=crlf
+backend/src/main/resources/META-INF/services/* text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.vue text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sql text eol=lf
+*.java text eol=lf
+*.xml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.properties text eol=lf
+
+# 二进制与本机生成物
+*.jar binary
+*.png binary
+*.woff binary
+*.woff2 binary
+*.mv.db binary
+*.zip binary

@@ -1,0 +1,129 @@
+# Defaults that hold in every profile. Anything environment-specific lives in a profile block or an env var,
+# and secrets never get a value here — see the rsshub.operator.password rule in OperatorBootstrap.
+application:
+  name: rss-hub
+
+server:
+  port: ${PORT:8080}
+  # The SPA is served by Vite in dev and by Caddy in production, so the app never needs to know the real host.
+  forward-headers-strategy: framework
+  error:
+    include-stacktrace: never
+    include-message: never
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        name: RSSHUB_SESSION
+
+spring:
+  main:
+    banner-mode: off
+  threads:
+    virtual:
+      # Java 21 + Boot 4: blocking fetches against slow feed hosts are exactly what virtual threads are for.
+      enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+  datasource:
+    # AUTO_SERVER cannot be combined with DB_CLOSE_ON_EXIT in H2 2.x (rejected with SQLFeatureNotSupportedException),
+    # and nothing here needs a second process attaching to the file.
+    url: ${DB_URL:jdbc:h2:file:./data/rss-hub;DB_CLOSE_ON_EXIT=FALSE}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
+  flyway:
+    enabled: true
+    # {vendor} resolves to h2 or postgresql, so one property selects the dialect-specific DDL.
+    locations: classpath:db/migration/{vendor}
+    baseline-on-migrate: false
+  sql:
+    init:
+      mode: never
+  jackson:
+    default-property-inclusion: non_null
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Health only. The rest of the actuator surface (env, configprops, heapdump) would leak secrets and
+        # internal paths to anyone who can reach the port, and nothing in this project needs them.
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  health:
+    db:
+      enabled: true
+
+logging:
+  level:
+    com.rsshub: INFO
+  pattern:
+    # traceId comes from RequestIdFilter's MDC; without it a slow fetch is unattributable in the log.
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%X{traceId:-}] %logger{36} - %msg%n"
+
+rsshub:
+  operator:
+    # Deliberately unset. Provide RSSHUB_OPERATOR_PASSWORD (or --rsshub.operator.password=...) on first start.
+    username: ${RSSHUB_OPERATOR_USER:admin}
+    password: ${RSSHUB_OPERATOR_PASSWORD:}
+  ssrf:
+    # Empty means "no exception": private, loopback, link-local, metadata and reserved ranges are always refused.
+    allow-private-prefixes: []
+  security:
+    # 32 random bytes, base64. Unset means TOTP enrolment is refused rather than storing a secret in plaintext;
+    # losing this key makes enrolled secrets unreadable (SecretCipher), so it belongs in the install's backup.
+    secret-key: ${RSSHUB_SECRET_KEY:}
+  fetch:
+    # 03 §4.1's parameter table, written out rather than left to the code defaults so it can be tuned per install.
+    # Boot parses these suffixes: s=seconds, m=minutes, h=hours, d=days.
+    interval: 60m
+    min-interval: 5m
+    jitter: 5m
+    connect-timeout: 10s
+    read-timeout: 30s
+    max-bytes: 10485760
+    max-redirects: 3
+    per-host-gap: 30s
+    auth-backoff: 24h
+    backoff-base: 5m
+    backoff-cap: 24h
+    notfound-gone-days: 30d
+    concurrency: 6
+    user-agent: "rss-hub/1.0 (self-hosted; personal reader)"
+  notify:
+    # 03 §8.3's delivery knobs. The retry ladder (five attempts, 1/5/15/60 minutes) and the breaker (five
+    # consecutive failures) are code, not config: both are design decisions, and a per-install need to tune them
+    # has not shown up yet.
+    enabled: ${RSSHUB_NOTIFY_ENABLED:true}
+    connect-timeout: 5s
+    read-timeout: 10s
+    user-agent: "rss-hub/1.0 (alert webhook)"
+    # The signing keys. Values come from the environment only — a rule row stores just a secretRef name, because
+    # rules are exported with every backup and shown in the UI (03 §9.1). A ref typed as "ci-hook" in the rules UI
+    # is set here as RSSHUB_NOTIFY_SECRETS_CI_HOOK; NotifyPolicy.secret() matches them by ignoring case and the
+    # -/_/. separators, since a hyphen cannot appear in an environment variable name at all.
+    secrets: {}
+  storage:
+    # MinIO is the production target; the container is deferred, so raw responses live on disk next to the H2 file.
+    raw-dir: ${RSSHUB_RAW_DIR:data/raw}
+    raw-retention: 30d
+  publish:
+    # 03 §6.2 的公开出口。base-url 必须显式配置成对外域名：guid 是"永久 URL"，用请求头现推会让同一个
+    # 域名换绑（或一次 Host 投毒）产生第二个永久 ID，而 feed 端会把同一篇文章当两条新内容推。
+    base-url: ${RSSHUB_PUBLISH_BASE_URL:http://localhost:8080}
+    site-title: ${RSSHUB_PUBLISH_TITLE:我的订阅站}
+    # RSS 2.0 的 channel description 是必填项；留空时 PostFeedSource 会生成一句兜底描述而不是 500。
+    description: ${RSSHUB_PUBLISH_DESCRIPTION:}
+    language: zh-CN
+    image-url: ${RSSHUB_PUBLISH_IMAGE:}
+    # 03 §6.3 规则 5/7：常规源只出最近 N 条，JSON Feed 单文件软上限 100KB，超限降级为摘要+回链。
+    item-limit: 50
+    ttl-minutes: 60
+    json-max-bytes: 100000
+    generator: rss-hub
+    # 公开 HTML 页显示日期的历法；feed 里始终是带偏移的真实时刻，不受这项影响。
+    display-zone: Asia/Shanghai

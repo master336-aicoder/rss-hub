@@ -1,0 +1,49 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "JSON Feed 1.1",
+  "home_page_url": "https://json.example.com/",
+  "feed_url": "https://json.example.com/feed.json",
+  "description": "Attachments, authors and a numeric-free id",
+  "icon": "https://json.example.com/icon.png",
+  "language": "en",
+  "items": [
+    {
+      "id": "urn:uuid:9d5a",
+      "url": "/posts/one",
+      "external_url": "https://elsewhere.example/one",
+      "title": "One",
+      "summary": "Plain <summary> with a <",
+      "content_html": "<p>Body with <a href=\"/posts/one\">self</a> and <img src=\"//cdn.example.com/x.png\"></p>",
+      "image": "https://json.example.com/one.png",
+      "date_published": "2026-10-18T01:00:00Z",
+      "date_modified": "2026-10-18T02:00:00+08:00",
+      "language": "en-gb",
+      "tags": ["tech", "json", " "],
+      "authors": [{"name": "Ann", "url": "https://ann.example.com", "avatar": "https://ann.example.com/a.png"}],
+      "attachments": [
+        {"url": "/media/one.mp3", "mime_type": "audio/mpeg", "size_in_bytes": 4096, "duration_in_seconds": 125},
+        {"url": "https://cdn.example.com/two.mp3", "mime_type": "audio/mpeg", "size_in_bytes": "not-a-number"}
+      ],
+      "custom_extension": "kept in extras",
+      "custom_object": {"ignored": true}
+    },
+    {
+      "id": 12345,
+      "title": "Numeric id, content_text only",
+      "content_text": "a < b & c",
+      "date_published": "2026-10-17T00:00:00Z"
+    },
+    {
+      "url": "https://json.example.com/posts/no-id",
+      "title": "No id at all",
+      "date_published": "not a date"
+    },
+    {
+      "id": "hidden-one",
+      "title": "Empty content and junk types",
+      "content_html": "<script>nope</script>",
+      "date_published": 1760780000,
+      "tags": "not an array"
+    }
+  ]
+}

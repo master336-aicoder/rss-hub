@@ -1,0 +1,417 @@
+/**
+ * F13: the brand layer over Bootstrap 5.3.
+ *
+ * Bootstrap owns the components (spacing scale, cards, tables, forms, badges, pagination) and this file owns the
+ * identity: the accent that used to be Fluent's `#0067c0`, 8px surfaces on cards, 14px type, hairline strokes, and
+ * the mica header. Everything is expressed through Bootstrap's own CSS variables wherever they exist, because
+ * Bootstrap's compiled components read the `--bs-*` custom properties at use time — a colour that has no variable
+ * (`.btn-primary`'s background is `--bs-btn-bg`, set per component) gets a small override instead of a Sass build.
+ *
+ * Rules that still hold after the migration:
+ *   - no hex colour appears in a `.vue` file; components take colour from a Bootstrap contextual class
+ *     (`text-primary`, `bg-body-tertiary`, `text-bg-success`) or from a token defined here;
+ *   - no Bootstrap JavaScript is loaded. Dropdowns, collapses and toasts are Vue state plus Bootstrap's CSS
+ *     classes, so nothing here depends on Popper or on an imperative `new bootstrap.Dropdown(...)`.
+ */
+:root {
+  /* brand tokens — measured numbers, not Microsoft's published Fluent values. F14 tints all neutrals pale blue and leaves `--accent` at #0067c0 (white label 5.67:1). */
+  --canvas: #e9f1f9;
+  --surface: #ffffff;
+  --surface-alt: #f3f8fd;
+  --surface-hover: #dfeaf5;
+  --mica: rgba(233, 241, 249, 0.72);
+  --line: #cddceb;
+  --line-soft: #dce7f3;
+  --line-strong: #b6cbe0;
+  --ink: #16212e;
+  --ink-2: #4a5e75;
+  --ink-3: #546a85;
+  --accent: #0067c0;
+  --accent-hover: #005da9;
+  --accent-active: #004c8a;
+  --accent-ink: #0a3069;
+  --accent-wash: #e3eef9;
+  --accent-line: #9cccf2;
+  --radius-control: 4px;
+  --radius-card: 8px;
+  --shadow-card: 0 1px 3px rgb(15 40 70 / 12%);
+  --shadow-flyout: 0 4px 16px rgb(15 40 70 / 18%);
+  --ease: cubic-bezier(0.1, 0.9, 0.2, 1);
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", "Menlo", monospace;
+
+  /* Bootstrap's own knobs, pointed at the brand */
+  --bs-body-font-family: var(--font-ui);
+  /* Bootstrap's `font-monospace` utility reads its own variable, so pointing it at the brand stack keeps code,
+     raw XML samples and the article editor on the same faces as `code`/`pre`. */
+  --bs-font-monospace: var(--font-mono);
+  --bs-body-font-size: 1rem;
+  --bs-body-line-height: 1.5;
+  --bs-body-color: var(--ink);
+  --bs-body-bg: var(--surface);
+  --bs-emphasis-color: #0b1a2b;
+  --bs-secondary-color: var(--ink-2);
+  --bs-tertiary-color: var(--ink-3);
+  --bs-border-color: var(--line);
+  --bs-border-color-translucent: rgb(20 45 80 / 14%);
+  --bs-link-color: var(--accent);
+  --bs-link-hover-color: var(--accent-hover);
+  --bs-primary: var(--accent);
+  --bs-primary-rgb: 0, 103, 192;
+  --bs-secondary-bg: var(--surface-alt);
+  --bs-tertiary-bg: var(--surface-alt);
+  --bs-focus-ring-color: rgb(0 103 192 / 35%);
+  --bs-box-shadow-sm: var(--shadow-card);
+  --bs-box-shadow: var(--shadow-flyout);
+  --bs-border-radius: var(--radius-control);
+  --bs-border-radius-sm: var(--radius-control);
+  --bs-border-radius-lg: 10px;
+  --bs-form-check-bg: var(--surface);
+}
+
+/* Bootstrap is entirely rem-based, so the root size is what makes the console dense or airy. The screens were
+   measured at 14px; scaling the root keeps every Bootstrap component (buttons, tables, badges) consistent with it. */
+html {
+  font-size: 14px;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  background: var(--canvas); /* F14: the page paints the canvas itself; `--bs-body-bg` now means the surface. */
+  color: var(--bs-body-color);
+}
+
+code,
+pre,
+kbd,
+samp,
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* --- contextual palette ------------------------------------------------------------------------------------------------
+ * Bootstrap's `primary` is its own blue; ours is the accent. Every contextual class reads these three variables,
+ * so one block recolours buttons, badges, alerts, progress bars, nav pills, pagination and list-group
+ * actives all at once — that is what keeps a re-skin a file edit rather than a sweep. */
+:root {
+  --bs-primary-bg-subtle: var(--accent-wash);
+  --bs-primary-border-subtle: var(--accent-line);
+  --bs-primary-text-emphasis: var(--accent-ink);
+}
+
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--accent);
+  --bs-btn-border-color: var(--accent);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--accent-hover);
+  --bs-btn-hover-border-color: var(--accent-hover);
+  --bs-btn-focus-shadow-rgb: 0, 103, 192;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--accent-active);
+  --bs-btn-active-border-color: var(--accent-active);
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #9dc4e4;
+  --bs-btn-disabled-border-color: #9dc4e4;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--accent);
+  --bs-btn-border-color: var(--accent-line);
+  --bs-btn-hover-color: var(--accent-ink);
+  --bs-btn-hover-bg: var(--accent-wash);
+  --bs-btn-hover-border-color: var(--accent);
+  --bs-btn-active-color: var(--accent-ink);
+  --bs-btn-active-bg: var(--accent-wash);
+  --bs-btn-active-border-color: var(--accent);
+  --bs-btn-focus-shadow-rgb: 0, 103, 192;
+}
+
+.text-primary {
+  color: var(--accent) !important;
+}
+
+.bg-primary {
+  background-color: var(--accent) !important;
+}
+
+.border-primary {
+  border-color: var(--accent) !important;
+}
+
+.alert-primary {
+  --bs-alert-color: var(--accent-ink);
+  --bs-alert-bg: var(--accent-wash);
+  --bs-alert-border-color: var(--accent-line);
+  --bs-alert-link-color: var(--accent-active);
+}
+
+.badge.text-bg-primary {
+  background-color: var(--accent) !important;
+  color: #fff !important;
+}
+
+.progress-bar {
+  --bs-progress-bar-bg: var(--accent);
+}
+
+.page-item.active .page-link {
+  --bs-pagination-active-bg: var(--accent);
+  --bs-pagination-active-border-color: var(--accent);
+}
+
+.page-link {
+  --bs-pagination-color: var(--accent);
+  --bs-pagination-hover-color: var(--accent-hover);
+  --bs-pagination-focus-color: var(--accent-hover);
+}
+
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--accent);
+}
+
+.list-group-item.active {
+  --bs-list-group-active-bg: var(--accent);
+  --bs-list-group-active-border-color: var(--accent);
+}
+
+.form-check-input:checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 .2rem rgb(0 103 192 / 25%);
+}
+
+/* Win11's own affordance: a keyboard focus is a solid accent ring, not a glow. Bootstrap's box-shadow focus stays
+   on form fields (above) but controls, links and tabs get the outline that made TC-UIF-07 measurable. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+::selection {
+  background: var(--accent-wash);
+}
+
+/* --- component surfaces ------------------------------------------------------------------------------------------------
+ * Bootstrap's defaults are a hair heavier than the console was; these four rules are the whole "make it look like
+ * our app, not like the framework" budget. */
+.card {
+  /* Bootstrap reads one radius for both cards and controls; the console wants 4px on controls, 8px on surfaces. */
+  --bs-card-border-radius: var(--radius-card);
+  --bs-card-inner-border-radius: calc(var(--radius-card) - var(--bs-border-width));
+  box-shadow: var(--shadow-card);
+  border-color: var(--line-soft);
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--line-soft);
+  --bs-table-hover-bg: var(--surface-hover);
+  margin-bottom: 0;
+}
+
+.table > thead {
+  background: var(--surface-alt);
+}
+
+.table > thead th {
+  color: var(--ink-2);
+  font-size: .85rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.dropdown-menu,
+.flyout {
+  box-shadow: var(--shadow-flyout);
+  border-color: var(--line-soft);
+  font-size: .95rem;
+}
+
+/* --- shared shapes that Bootstrap has no name for ---------------------------------------------------------------------- */
+
+/* The sticky header: the canvas showing through a blur, which is what makes a Win11 bar read as mica.
+   Bootstrap's `.navbar` sets its own background variable, so the override goes through that variable. */
+.app-navbar {
+  --bs-navbar-padding-x: 1rem;
+  --bs-navbar-padding-y: .35rem;
+  background: var(--mica);
+  backdrop-filter: blur(16px) saturate(1.6);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Navigation: the selected tab lifts onto its own surface and wears an accent bar; the rest are quiet text that
+   answers a hover with a fill. Bootstrap gives the layout (navbar-nav, flex, gap) and this gives the state. */
+.app-navbar .nav-link {
+  position: relative;
+  color: var(--ink-2);
+  border-radius: var(--radius-control);
+  font-size: .93rem;
+  padding: .4rem .75rem .5rem;
+  transition: background 120ms var(--ease), color 120ms var(--ease);
+}
+
+.app-navbar .nav-link:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.app-navbar .nav-link.router-link-active {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
+}
+
+.app-navbar .nav-link.router-link-active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: .28rem;
+  width: 16px;
+  height: 3px;
+  margin-left: -8px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+/* A key figure on the wall: big number, quiet label. Bootstrap has no type scale for this, and the alternative is
+   six inline styles per card. */
+.metric {
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+}
+
+.metric-label {
+  color: var(--ink-2);
+  font-size: .85rem;
+}
+
+.metric-hint {
+  color: var(--ink-3);
+  font-size: .8rem;
+}
+
+/* Identifiers (urls, guids, keys) stay monospaced and clamped wherever they appear; Bootstrap's `.text-break`
+   would rather wrap them mid-token. */
+.muted {
+  color: var(--ink-2);
+}
+
+.quiet {
+  color: var(--ink-3);
+}
+
+.sticky-page-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--mica);
+  backdrop-filter: blur(16px) saturate(1.6);
+}
+
+/* A flex child that owns the viewport has to be allowed to shrink below its own content, and Bootstrap has no
+   utility for `min-height: 0` — without it, three scrolling columns become one overflowing page. */
+.pane-host {
+  min-height: 0;
+}
+
+.pane-scroll {
+  overflow: auto;
+  min-height: 0;
+}
+
+/* --- F14 · 淡蓝色调 ---------------------------------------------------------------------------------------------------
+ * The re-tint the user asked for touches no `.vue` file: the neutral family at the top of this file is now blue and
+ * `--accent` stays #0067c0. This block closes the four gaps that re-tinting exposed, and each is a case of
+ * Bootstrap reading a variable the brand layer had not pointed at the brand.
+ *
+ *   1. `.form-control`, `.card` and `.dropdown-menu` all take their background from `--bs-body-bg`, so with the
+ *      canvas behind that variable the console was one flat sheet — `getComputedStyle` on /login measured body,
+ *      `.card` and `.form-control` at the same `rgb(233,241,249)`. `--bs-body-bg` is therefore the *surface*
+ *      (white, above) and `body` paints `--canvas` (below); that is what makes the "canvas with white
+ *      surfaces" the requirements promise actually render.
+ *   2. The background utilities read the `*-rgb` *twins* of the variables F13 pointed at the brand, and setting
+ *      `--bs-tertiary-bg` does nothing for `.bg-body-tertiary`. Without these, the inbox rail and card footers
+ *      stayed Bootstrap's neutral #f8f9fa, and the one bare `.text-body` (大屏 KPI value) stayed #212529, while
+ *      everything beside them went blue.
+ *   3. `.text-bg-secondary` — the "quiet/pending/paused" badge on nine screens — reads `--bs-secondary-rgb`, not
+ *      `--bs-secondary-bg`, so it was still Bootstrap's gray. Slate blue #5a7188 carries its white label at 5.06:1.
+ *   4. Four button rules ship their gray as a *literal*, so no variable reaches them: `.btn-outline-secondary`
+ *      (18 sites — the most-used control in the console), `.btn-secondary`, `.btn-outline-dark` and a disabled
+ *      `.btn-link`. Found by grepping `bootstrap.min.css` for the gray hexes and intersecting the selectors with
+ *      the classes the 15 `.vue` files actually use (`.dev-logs/f14-grayhunt.js`). Bridged the way `.btn-primary`
+ *      is: per-component `--bs-btn-*` keys, which keeps the sweep honest — a "no hex in a .vue file" rule is
+ *      worthless if the framework's own hexes still show through.
+ */
+:root {
+  --bs-body-color-rgb: 22, 33, 46;       /* = --ink #16212e */
+  --bs-secondary-bg-rgb: 243, 248, 253;  /* = --surface-alt #f3f8fd */
+  --bs-tertiary-bg-rgb: 243, 248, 253;
+  --bs-secondary-rgb: 90, 113, 136;      /* text-bg-secondary → slate blue */
+  --bs-light-rgb: 243, 248, 253;         /* text-bg-light chips → pale blue (black label 19.66:1) */
+  --bs-dark-rgb: 11, 26, 43;             /* = --bs-emphasis-color */
+  --slate: #5a7188;                       /* = --bs-secondary-rgb; white label 5.06:1 */
+  --slate-hover: #4b5f73;                 /* white label 6.60:1 */
+  --slate-active: #425466;                /* white label 7.80:1 */
+  --slate-disabled: #b3c1d1;
+}
+
+.btn-secondary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--slate);
+  --bs-btn-border-color: var(--slate);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--slate-hover);
+  --bs-btn-hover-border-color: var(--slate-hover);
+  --bs-btn-focus-shadow-rgb: 90, 113, 136;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--slate-active);
+  --bs-btn-active-border-color: var(--slate-active);
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: var(--slate-disabled);
+  --bs-btn-disabled-border-color: var(--slate-disabled);
+}
+
+/* The quiet button keeps Bootstrap's shape — quiet text until you hover — but takes its colours from the ink and
+   the hairline, so it reads as part of this palette instead of next to it. */
+.btn-outline-secondary {
+  --bs-btn-color: var(--ink-2);
+  --bs-btn-border-color: var(--line-strong);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--slate);
+  --bs-btn-hover-border-color: var(--slate);
+  --bs-btn-focus-shadow-rgb: 90, 113, 136;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--slate-active);
+  --bs-btn-active-border-color: var(--slate-active);
+  --bs-btn-disabled-color: var(--ink-3);
+  --bs-btn-disabled-border-color: var(--line);
+}
+
+.btn-outline-dark {
+  --bs-btn-color: var(--bs-emphasis-color);
+  --bs-btn-border-color: var(--bs-emphasis-color);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--bs-emphasis-color);
+  --bs-btn-hover-border-color: var(--bs-emphasis-color);
+  --bs-btn-focus-shadow-rgb: 11, 26, 43;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #091220;
+  --bs-btn-active-border-color: #091220;
+  --bs-btn-disabled-color: var(--bs-emphasis-color);
+  --bs-btn-disabled-border-color: var(--bs-emphasis-color);
+}
+
+.btn-link {
+  --bs-btn-disabled-color: var(--ink-3);
+}
