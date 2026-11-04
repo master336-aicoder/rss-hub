@@ -48,7 +48,7 @@
 
 | 模块 | 职责 | 明确不做 | 依赖 |
 |---|---|---|---|
-| `feedfetch` | 轮询调度、条件请求、退避、状态码语义、SSRF 防护、原始响应留存；F10 之后还接住"操作员要求立刻抓"——管理面把该源的 `fetch` 任务 `fire_at` 置为现在，并在**事务提交后**调 `feedfetch/FetchWakeup.java` 唤醒一轮（`adminapi/SubscriptionService.java:188-194` 的 `refresh` + `:202-211` 的 `armNow`），逐源节奏存 `feed.fetch_interval_minutes` 列（0=跟随站点） | 解析、业务规则 | PG、HttpClient |
+| `feedfetch` | 轮询调度、条件请求、退避、状态码语义、SSRF 防护、原始响应留存；F10 之后还接住"操作员要求立刻抓"——管理面把该源的 `fetch` 任务 `fire_at` 置为现在，并在**事务提交后**调 `feedfetch/FetchWakeup.java` 唤醒一轮（`adminapi/SubscriptionService.java:332-338` 的 `refresh` + `:341-363` 的 `armNow`/`wakeAfterCommit`），逐源节奏存 `feed.fetch_interval_minutes` 列（0=跟随站点） | 解析、业务规则 | PG、HttpClient |
 | `feedparse` | 把 RSS 2.0/Atom/RDF/JSON Feed 归一成 `NormalizedFeed/NormalizedEntry`；容错修复 | 网络、存储 | jsoup/SAX、`feed` 无关 |
 | `feedstore` | 幂等落库、条目修订、已读/星标/归档三态、收件箱的六个过滤（F2.4：`state/feed/group/q/category/alerted` + 游标） | 渲染 | PG；**"只看命中"在 SQL 里读 `notification_log` 这张 rules 的表**（`EntryFinder.java:336-342` 的 EXISTS 子查询），**没有 `feedstore → rules` 的 Java 依赖**，写入权仍归 rules，所以 ArchUnit 的七条与 `no_package_cycles` 都不受影响 |
 | `feedrender` | 从任意 `FeedSource` 产出三格式 XML/JSON + ETag/304/ttl；分类源；HTML 发现标签 | 抓取 | 模板/DOM 构建 |
@@ -60,7 +60,7 @@
 | `ai` | 摘要/翻译/标签/近似重复；按 content_hash 缓存；预算护栏 | 阻塞主流程 | LLM provider |
 | `repack` | 聚合再分发（F7）：集合与成员、把已订阅条目投影成 `/repack/{slug}.{format}` 出口、逐源全文开关与审计 | 抓取、解析、 writer 细节（都委托给 `feedrender`） | feedrender、common（`JdbcClient` 直读 `entry`/`feed`，**不依赖 feedstore**） |
 | `changelog` | 变更公告（F1.6）：`content_change` 表的读写 + 把变更行投影成 `/feed/changelog.{format}` 出口；"哪些变更算公开事件"这条规则只住在这里（写入前的可见性判定），不靠查询时补 join | 抓取、解析、writer 细节（都委托给 `feedrender`）、判定状态机合法性（那是 `editorial` 的迁移表） | feedrender、common（`JdbcClient` 直写自己的表，**不依赖 editorial**，所以删掉文章也删不掉记录） |
-| `admin-api` | 给 Vue3 的 REST（订阅管理、收件箱、发文、规则、健康度、大屏、设置与系统状态、聚合再分发、变更公告只读）。F10 让它在订阅面多三件事：`PATCH /api/feeds/{id}` 只认 `title/group/state/intervalMinutes` 四键（地址不可改，未知键 400 `unknown_field`）、`POST /api/feeds/{id}/refresh` 立刻排队、`GET /api/feeds/policy` 把默认与下限告知前端；F11 让大屏从"卡片列表"变成"一次请求给出十个标量 + 24 小时桶 + 六个区块（桶/分组/卡片墙/告警/发布/变更）"，但它**只做编排不写 SQL**（见边界规则 4） | — | 全部 |
+| `admin-api` | 给 Vue3 的 REST（订阅管理、收件箱、发文、规则、健康度、大屏、设置与系统状态、聚合再分发、变更公告只读）。F10 让它在订阅面多三件事：`PATCH /api/feeds/{id}` 只认 `title/group/state/intervalMinutes` 四键（地址不可改，未知键 400 `unknown_field`）、`POST /api/feeds/{id}/refresh` 立刻排队、`GET /api/feeds/policy` 把默认与下限告知前端；F11 让大屏从"卡片列表"变成"一次请求给出十个标量 + 24 小时桶 + 六个区块（桶/分组/卡片墙/告警/发布/变更）"，但它**只做编排不写 SQL**（见边界规则 4）；F16 加批量订阅两个端点（`POST /api/feeds/batch/plan` 预览、`POST /api/feeds/batch` 写入），拆分器 `adminapi/PastedSubscriptions.java` 是**纯文本**工具类——不归一、不校验 SSRF、不碰库，判决与写入都归 `SubscriptionService.classify/addBatch`。批量**逐行不发网络请求**（与 OPML 导入同口径），所以这个叶子包仍然没有触网，边界规则 2 不破 | — | 全部 |
 | `security` | 单用户登录、TOTP、session、CSRF、API token | — | Spring Security |
 | `settings` | 运行时参数的键值存取与校验（`settings` 表）：大屏条数/刷新间隔、收件箱与投递日志每页条数。**收件箱那一项是真实读取路径**——SPA 不发 `limit`，缺省值由这里决定（2026-11-01 修正：此前前端硬发 `limit=50`，设置页等于摆设） | 抓取节奏、投递超时（部署级配置，改了要重启，不入库） | common |
 | `web`（控制台，不在这个 Maven 模块里） | Vue 3 单文件组件 + vue-router + Pinia，15 个 `.vue` = 12 视图 + 2 组件（`ReaderPane`/`RuleEditor`）+ `App.vue` 外壳；F13 起 UI 骨架交给 Bootstrap 5.3 的 **CSS 类**（`navbar`/`card`/`table`/`form-control`/`badge`/`alert`/`progress`），本项目自己的样式只剩一个品牌层文件（`web/src/styles/theme.css`：令牌 + 把 `--bs-*` 指向令牌）加各视图的少量 scoped 规则 | 业务规则（一律留在后端）；**Bootstrap 的 JavaScript**（下拉/折叠/toast 用 Vue 状态 + CSS 类实现，运行时不依赖 Popper） | `admin-api`；`bootstrap` 的编译后 CSS 与图标字体 |

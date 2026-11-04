@@ -74,6 +74,38 @@ export interface FetchPolicy {
 }
 
 /**
+ * What one pasted line became. Mirrors `SubscriptionService.PlanItem`.
+ *
+ * The four read-only statuses come from the plan endpoint and the fifth (`added`) only from the write, because a line
+ * can stop being ready between the two calls — a duplicate that appeared in between is reported, not an error.
+ * `reason` is the problem code (`already_subscribed`, `private_target:10.0.0.8`, `scheme_not_allowed`), which is what
+ * an operator pastes into an issue; the text is deliberately the backend's, not a translation of it.
+ */
+export interface BatchPlanItem {
+  lineNo: number;
+  /** The name typed in front of the address; becomes the subscription's own title. */
+  label?: string;
+  /** Exactly what the splitter read, before the `https://` defaulting — so a misread line is visible as typed. */
+  address: string;
+  /** Absent when the line never became an address. */
+  url?: string;
+  status: "ready" | "duplicate" | "refused" | "invalid" | "added";
+  reason?: string;
+}
+
+/** The preview: what the paste would do, and how many rows the write would create. */
+export interface BatchPlan {
+  items: BatchPlanItem[];
+  ready: number;
+}
+
+/** The write: the same lines, each now carrying the verdict that was actually applied. */
+export interface BatchResult {
+  added: number;
+  items: BatchPlanItem[];
+}
+
+/**
  * The name the list shows. The server resolves the same precedence in SQL for its own ordering, but it sends the
  * two titles separately so the edit box can show the site's title and the override apart.
  */
@@ -88,6 +120,10 @@ export const feedsApi = {
   groups: () => http.get<string[]>("/api/feeds/groups"),
   discover: (url: string) => http.post<Discovery>("/api/feeds/discover", { url }),
   add: (url: string, group?: string) => http.post<Feed>("/api/feeds", { url, group }),
+  /** Reads a paste and reports every line. Sends no group: the preview decides nothing about where the rows land. */
+  batchPlan: (text: string) => http.post<BatchPlan>("/api/feeds/batch/plan", { text }),
+  /** The write re-splits the text itself, so a preview cannot be turned into an instruction it never checked. */
+  batchAdd: (text: string, group?: string) => http.post<BatchResult>("/api/feeds/batch", { text, group }),
   update: (id: number, body: FeedEdit) => http.patch<Feed>(`/api/feeds/${id}`, body),
   remove: (id: number) => http.del<void>(`/api/feeds/${id}`),
   refresh: (id: number) => http.post<{ queued: boolean; id: number }>(`/api/feeds/${id}/refresh`),

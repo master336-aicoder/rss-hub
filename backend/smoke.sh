@@ -508,6 +508,60 @@ check "$(printf '%s' "$COUNTERS" | sed -n 's/.*"total":\([0-9]*\).*/\1/p')" "and
   "$(printf '%s' "$(inbox '?state=all')" | sed -n 's/.*"counters":{\([^}]*\)}.*/\1/p' | sed -n 's/.*"total":\([0-9]*\).*/\1/p')"
 check 401 "anonymous counters is refused" "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/entries/counters")"
 
+# --- F16: batch subscribe — paste many addresses, split on , ; 、 space and newline ----------------
+# The paste below is one of each reading the splitter has to make: two comma-separated feeds with a name in front of
+# the first, a private address the SSRF rule must refuse, a non-http scheme, and a line that is not an address at all.
+BATCH_BODY="${TMPDIR:-.}/smoke-batch.json"
+printf '{"text":"甲: http://127.0.0.1:19999/feed.xml?b=1, http://127.0.0.1:19999/feed.xml?b=2\\nhttp://192.168.9.9/in.rss\\nftp://127.0.0.1:19999/f\\n见备注","group":"批量"}' > "$BATCH_BODY"
+batch_write() { curl -s -b "$JAR" -c "$JAR" -H "X-XSRF-TOKEN: $(csrf)" -H 'Content-Type: application/json' \
+  -X POST "$BASE/api/feeds$1" --data-binary @"$2"; }
+# One object per line so a fact can be pinned to the subscription it belongs to, not to the response as a whole.
+batch_row() { curl -s -b "$JAR" "$BASE/api/feeds" | tr '{' '\n' | grep "$1" | head -1; }
+FEEDS_BEFORE=$(curl -s -b "$JAR" "$BASE/api/feeds" | grep -o '"id":' | wc -l | tr -d ' ')
+
+PLAN=$(batch_write "/batch/plan" "$BATCH_BODY")
+check 5 "plan reads every line of the paste" "$(printf '%s' "$PLAN" | grep -o '"lineNo":' | wc -l | tr -d ' ')"
+check 2 "plan counts only the subscribable lines as ready" \
+  "$(printf '%s' "$PLAN" | sed -n 's/.*"ready":\([0-9]*\).*/\1/p')"
+check yes "plan refuses the private address and says why" "$(has '"status":"refused"' "$PLAN")"
+check yes "plan calls a non-http scheme invalid" "$(has '"reason":"scheme_not_allowed"' "$PLAN")"
+check yes "plan still shows the line it could not read" "$(has '"address":"见备注"' "$PLAN")"
+check "$FEEDS_BEFORE" "and plan writes nothing at all" \
+  "$(curl -s -b "$JAR" "$BASE/api/feeds" | grep -o '"id":' | wc -l | tr -d ' ')"
+
+ADDED=$(batch_write "/batch" "$BATCH_BODY")
+check 2 "batch write subscribes the two ready lines" "$(printf '%s' "$ADDED" | sed -n 's/.*"added":\([0-9]*\).*/\1/p')"
+ROW=$(batch_row 'feed.xml?b=1')
+check yes "the name in front of the address became its title" "$(has '"customTitle":"甲"' "$ROW")"
+check yes "the whole batch landed in one group" "$(has '"groupName":"批量"' "$ROW")"
+check yes "the write armed a fetch for it" "$(has '"nextFetchAt"' "$ROW")"
+BATCHED_FID=$(printf '%s' "$ROW" | sed -n 's/.*"id":\([0-9]*\).*/\1/p')
+# The exchange still happens on the dispatcher's worker, and one host only gets a request per per-host-gap, so the
+# wait is for the fetch to arrive rather than for the queue to accept it.
+LANDED=no
+for _i in $(seq 1 45); do
+  sleep 1
+  [ "$(batch_row 'feed.xml?b=1' | grep -c '"lastHttpStatus":200')" = 1 ] && LANDED=yes && break
+done
+check yes "and it really fetched over http" "$LANDED"
+check yes "the paste is visible in the inbox" "$(curl -s -b "$JAR" "$BASE/api/entries?state=all&feed=$BATCHED_FID" | grep -q '"id":' && echo yes || echo no)"
+check 0 "the same paste a second time adds nothing" \
+  "$(printf '%s' "$(batch_write "/batch" "$BATCH_BODY")" | sed -n 's/.*"added":\([0-9]*\).*/\1/p')"
+check yes "and reports each line as already subscribed" "$(has '"reason":"already_subscribed"' "$(batch_write "/batch/plan" "$BATCH_BODY")")"
+
+BIG="${TMPDIR:-.}/smoke-batch-big.json"
+{ printf '{"text":"'; for _i in $(seq 1 201); do printf 'http://127.0.0.1:19999/feed.xml?n=%s\\n' "$_i"; done; printf '"}'; } > "$BIG"
+check 400 "a paste over the cap is refused out of hand" \
+  "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" -H "X-XSRF-TOKEN: $(csrf)" \
+     -H 'Content-Type: application/json' -X POST "$BASE/api/feeds/batch" --data-binary @"$BIG")"
+check yes "with the problem code an operator can quote" \
+  "$(has 'urn:rsshub:too_many_lines' "$(curl -s -b "$JAR" -c "$JAR" -H "X-XSRF-TOKEN: $(csrf)" \
+     -H 'Content-Type: application/json' -X POST "$BASE/api/feeds/batch" --data-binary @"$BIG")")"
+check 4 "an anonymous batch write is rejected" \
+  "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -X POST \
+     "$BASE/api/feeds/batch/plan" --data-binary @"$BATCH_BODY" | cut -c1)"
+rm -f "$BATCH_BODY" "$BIG"
+
 # --- M0 again: logout ends the session ----------------------------------------------------------
 
 check 4 "authenticated logout without csrf rejected" "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" -X POST "$BASE/api/auth/logout" | cut -c1)"

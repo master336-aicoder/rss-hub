@@ -1,9 +1,9 @@
 # 05 · 功能测试计划（细化到按钮）
 
 > 项目：RSS 订阅与发布服务（Spring Boot + Vue3）
-> 文档状态：v8（2026-11-02；第二~七轮见 18–23 节，**第八轮 F10 订阅编辑 / F11 大屏丰富化 / F12 界面令牌见第 24 节，D-04 与 F-05 关闭**）
+> 文档状态：v9（2026-11-03；第二~七轮见 18–23 节，第八轮 F10/F11/F12 见第 24 节（D-04 与 F-05 关闭），第九~十一轮 F13/F14/F15 见 24.6/24.7/24.8，**第十二轮 F16 批量订阅见第 25 节**）
 > 依据：[01 需求分析](./design/01-requirements.md) · [02 架构设计](./design/02-architecture.md) · [03 技术设计](./design/03-technical-design.md) · [04 产研计划](./design/04-roadmap.md) · 规范 [rss-guide.md](./rss-guide.md) / [rss-quickref.md](./rss-quickref.md)
-> 被测对象：M0–M3.5 + M5 + F1.6 + F2.4 + F10–F12 已落地代码（后端 **397** 项测试全绿 / 38 个测试类，2026-11-02 实测；第二~八轮口径分别为 264/343/360/370/380/382/397，每轮交付前全量复跑）
+> 被测对象：M0–M3.5 + M5 + F1.6 + F2.4 + F10–F15 + F16 已落地代码（后端 **421** 项测试全绿 / 40 个测试类，2026-11-03 实测；第二~十二轮口径分别为 264/343/360/370/380/382/397/397/397/397/397/421，每轮交付前全量复跑）
 > **本文每个"控件""端点"都来自实际代码，每条期望都带 `文件:行号`；未实现的 FR 一律进第 12 节标为阻塞，不虚构按钮。**
 
 ---
@@ -27,7 +27,7 @@
 | 标记 | 含义 |
 |---|---|
 | `[自]` | 已被自动化覆盖，"现状"列给出对应测试类，`./mvnw verify` 跑 |
-| `[C]` | curl 可跑（无需浏览器），用 `backend/smoke.sh`（205 项，附录 A 为展开参考） —— **本项目主力验证手段** |
+| `[C]` | curl 可跑（无需浏览器），用 `backend/smoke.sh`（222 项，附录 A 为展开参考） —— **本项目主力验证手段** |
 | `[B]` | 只能在浏览器人工点（渲染与交互）。**本轮未执行过任何 `[B]` 用例**，见第 16 节 |
 | `[机]` | 不开浏览器、也不起服务的机器断言：`grep`/构建产物/`node` 脚本（如 `.dev-logs/f14-contrast2.js`）或单元/集成测试里的一条具体断言。与 `[自]` 的区别是它守的是**源码或产物本身**，不是运行时行为 |
 
@@ -260,7 +260,7 @@
 | TC-RDR-16 | P1 | 不稳定 id 警告 | 打开 GUID 缺失、靠内容哈希兜底的条目 | 出现橙色提示"这条的 id 不稳定（…），来源改动可能被当成新文章。"；`stableId=false` | [ReaderPane.vue:114-117](../web/src/components/ReaderPane.vue#L114) · [EntryController.java:163,168](../backend/src/main/java/com/rsshub/adminapi/EntryController.java#L163) `[自]` `[B]` |
 | TC-RDR-17 | P2 | 语言标签 | 条目有 `lang` | 显示"语言：xx"；无则**整段不出现**（缺键，不是 null） | [ReaderPane.vue:118](../web/src/components/ReaderPane.vue#L118) · [application.yml:45](../backend/src/main/resources/application.yml#L45) `[B]` |
 | TC-RDR-18 | P1 | 点来源名 | 点 [:50](../web/src/components/ReaderPane.vue#L50) | 列表切到该订阅（`setFeed`），不跳外站 | `[B]` |
-| TC-RDR-19 | P0 | 外链安全 | 检查标题链接 | `target="_blank"` 必配 `rel="noreferrer noopener"`（面板 [:44](../web/src/components/ReaderPane.vue#L44)、附件 [:96](../web/src/components/ReaderPane.vue#L96)、订阅 URL [FeedsView.vue:274-277](../web/src/views/FeedsView.vue#L274)） | `[B]` |
+| TC-RDR-19 | P0 | 外链安全 | 检查标题链接 | `target="_blank"` 必配 `rel="noreferrer noopener"`（面板 [:44](../web/src/components/ReaderPane.vue#L44)、附件 [:96](../web/src/components/ReaderPane.vue#L96)、订阅 URL [FeedsView.vue:467-470](../web/src/views/FeedsView.vue#L467)） | `[B]` |
 
 ---
 
@@ -272,64 +272,64 @@
 
 | 编号 | P | 控件 | 操作 | 预期结果 | 依据 / 现状 |
 |---|---|---|---|---|---|
-| TC-SUB-01 | P0 | [解析](../web/src/views/FeedsView.vue#L210) | 贴一个博客首页地址 → 点 | `POST /api/feeds/discover`；成功显示"找到 <feedUrl>"（多于一个候选时追加"这一步给了候选，可以换或点候选后面的添加"）；`url` 为空时按钮禁用 | [FeedsView.vue:59-76](../web/src/views/FeedsView.vue#L59) · [FeedController.java:75-78](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L75) `[自]` `[C]` |
+| TC-SUB-01 | P0 | [解析](../web/src/views/FeedsView.vue#L318) | 贴一个博客首页地址 → 点 | `POST /api/feeds/discover`；成功显示"找到 <feedUrl>"（多于一个候选时追加"这一步给了候选，可以换或点候选后面的添加"）；`url` 为空时按钮禁用 | [FeedsView.vue:67-84](../web/src/views/FeedsView.vue#L67) · [FeedController.java:75-78](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L75) `[自]` `[C]` |
 | TC-SUB-02 | P0 | 解析=纯 feed 地址 | 直接贴 `…/feed.xml` | `candidates` 为空数组、`feedUrl` = 最终地址（Content-Type 已是 feed 型，不再嗅探） | [FeedDiscoverer.java:83-87](../backend/src/main/java/com/rsshub/feedfetch/FeedDiscoverer.java#L83) · [03 §4.4](./design/03-technical-design.md) `[自]` |
-| TC-SUB-03 | P0 | [候选单选](../web/src/views/FeedsView.vue#L223) | 一个页面给多个 feed | 渲染多个 radio（标题 + 类型 `code`），默认选中 `feedUrl` 或第一个（[`:65`](../web/src/views/FeedsView.vue#L65)）；换一个再点"添加"，订阅的是**选中项** | [FeedsView.vue:219-219](../web/src/views/FeedsView.vue#L219) `[B]` |
+| TC-SUB-03 | P0 | [候选单选](../web/src/views/FeedsView.vue#L331) | 一个页面给多个 feed | 渲染多个 radio（标题 + 类型 `code`），默认选中 `feedUrl` 或第一个（[`:73`](../web/src/views/FeedsView.vue#L73)）；换一个再点"添加"，订阅的是**选中项** | [FeedsView.vue:327-327](../web/src/views/FeedsView.vue#L327) `[B]` |
 | TC-SUB-04 | P1 | 候选优先级 | 页面同时有 json/atom/rss | 按文档顺序取 `rel=alternate`，优先级 json > atom > rss | [03 §4.4 第 1 步](./design/03-technical-design.md) `[自]` |
 | TC-SUB-05 | P1 | 相对地址绝对化 | feed 链接写成 `/feed.xml` | 用 `<base>`/页面 URL 绝对化后才入库 | [03 §4.4 第 4 步](./design/03-technical-design.md) · [rss-guide.md:614](./rss-guide.md#L614) `[自]AddressesTest` |
-| TC-SUB-06 | P0 | 常见路径回退 | HTML 里没有 `rel=alternate` | 依次试 `/feed` `/feed.xml` `/rss` `/rss.xml` `/atom.xml` `/index.xml` `/feed.json`；仍无则提示"这个地址上没有 feed（+ note）"并标为失败态 | [FeedsView.vue:66-68](../web/src/views/FeedsView.vue#L66) · [03 §4.4 第 2 步](./design/03-technical-design.md) · [rss-guide.md:551](./rss-guide.md#L551) `[自]` |
-| TC-SUB-07 | P0 | [添加](../web/src/views/FeedsView.vue#L213) | 点 | `POST /api/feeds` → **201** + 行对象 + 抓取已排队（消息"已订阅：… ，正在抓取"）；随后地址/分组输入与候选选择被清空 | [FeedController.java:80-84](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L80) · [FeedsView.vue:78-93](../web/src/views/FeedsView.vue#L78) `[自]` `[C]` |
-| TC-SUB-08 | P0 | 添加无 feed 的地址 | 选中的候选是空 | 400 `no_feed_found`；**解析失败与写失败必须是两条独立提示**（发现是网络往返，不能看起来像写坏了） | [SubscriptionService.java:78-81](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L78) · [03 §4.4](./design/03-technical-design.md) `[自]` |
-| TC-SUB-09 | P0 | 重复订阅 | 同一 canonical URL 再加 | 409 `already_subscribed`，列表不出现第二行 | [SubscriptionService.java:100-101](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L100) `[自]` `[C]` |
-| TC-SUB-10 | P1 | 裸域名补协议 | 输入 `example.com/rss` | 接受并按 `https://` 补齐 | [SubscriptionService.java:276-286](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L276) `[自]` |
-| TC-SUB-11 | P0 | 非 http(s) 协议 | 输入 `file:///etc/passwd`、`gopher://x`、`ftp://x` | 400 `scheme_not_allowed`（"Only http and https subscriptions are supported"） | [SubscriptionService.java:281-284](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L281) `[自]SsrfGuardTest` `[C]` |
-| TC-SUB-12 | P1 | 空串 | 清空后直接提交表单 | 400 `empty_url`（正常路径下 URL input 的 `required` 已先拦住） | [SubscriptionService.java:276-280](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L276) · [FeedsView.vue:203](../web/src/views/FeedsView.vue#L203) `[自]` |
-| TC-SUB-13 | P1 | 带 `#fragment` | 输入 `…/feed.xml#a` | 片段被剥掉，避免同一订阅裂成两行 | [SubscriptionService.java:287-289](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L287) `[自]` |
-| TC-SUB-14 | P1 | 分组一起提交 | 填分组再点添加 | 新行带 `groupName`；分组输入里的空格被 trim；空串＝无分组 | [FeedsView.vue:83](../web/src/views/FeedsView.vue#L83) · [FeedController.java:47-49](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L47) `[自]` `[B]` |
-| TC-SUB-15 | P1 | 消息配色语义 | 成功 vs 失败 | 同一行文案，成功 `class=ok`、失败 `class=error`（`failed` 标志位驱动） | [FeedsView.vue:179](../web/src/views/FeedsView.vue#L179), [:29-37](../web/src/views/FeedsView.vue#L29) `[B]` |
+| TC-SUB-06 | P0 | 常见路径回退 | HTML 里没有 `rel=alternate` | 依次试 `/feed` `/feed.xml` `/rss` `/rss.xml` `/atom.xml` `/index.xml` `/feed.json`；仍无则提示"这个地址上没有 feed（+ note）"并标为失败态 | [FeedsView.vue:74-76](../web/src/views/FeedsView.vue#L74) · [03 §4.4 第 2 步](./design/03-technical-design.md) · [rss-guide.md:551](./rss-guide.md#L551) `[自]` |
+| TC-SUB-07 | P0 | [添加](../web/src/views/FeedsView.vue#L321) | 点 | `POST /api/feeds` → **201** + 行对象 + 抓取已排队（消息"已订阅：… ，正在抓取"）；随后地址/分组输入与候选选择被清空 | [FeedController.java:80-84](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L80) · [FeedsView.vue:86-101](../web/src/views/FeedsView.vue#L86) `[自]` `[C]` |
+| TC-SUB-08 | P0 | 添加无 feed 的地址 | 选中的候选是空 | 400 `no_feed_found`；**解析失败与写失败必须是两条独立提示**（发现是网络往返，不能看起来像写坏了） | [SubscriptionService.java:113-116](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L113) · [03 §4.4](./design/03-technical-design.md) `[自]` |
+| TC-SUB-09 | P0 | 重复订阅 | 同一 canonical URL 再加 | 409 `already_subscribed`，列表不出现第二行 | [SubscriptionService.java:135-136](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L135) `[自]` `[C]` |
+| TC-SUB-10 | P1 | 裸域名补协议 | 输入 `example.com/rss` | 接受并按 `https://` 补齐 | [SubscriptionService.java:425-435](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L425) `[自]` |
+| TC-SUB-11 | P0 | 非 http(s) 协议 | 输入 `file:///etc/passwd`、`gopher://x`、`ftp://x` | 400 `scheme_not_allowed`（"Only http and https subscriptions are supported"） | [SubscriptionService.java:430-433](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L430) `[自]SsrfGuardTest` `[C]` |
+| TC-SUB-12 | P1 | 空串 | 清空后直接提交表单 | 400 `empty_url`（正常路径下 URL input 的 `required` 已先拦住） | [SubscriptionService.java:425-429](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L425) · [FeedsView.vue:311](../web/src/views/FeedsView.vue#L311) `[自]` |
+| TC-SUB-13 | P1 | 带 `#fragment` | 输入 `…/feed.xml#a` | 片段被剥掉，避免同一订阅裂成两行 | [SubscriptionService.java:436-438](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L436) `[自]` |
+| TC-SUB-14 | P1 | 分组一起提交 | 填分组再点添加 | 新行带 `groupName`；分组输入里的空格被 trim；空串＝无分组 | [FeedsView.vue:91](../web/src/views/FeedsView.vue#L91) · [FeedController.java:47-49](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L47) `[自]` `[B]` |
+| TC-SUB-15 | P1 | 消息配色语义 | 成功 vs 失败 | 同一行文案，成功 `class=ok`、失败 `class=error`（`failed` 标志位驱动） | [FeedsView.vue:287](../web/src/views/FeedsView.vue#L287), [:37-45](../web/src/views/FeedsView.vue#L37) `[B]` |
 
 ### 5.2 OPML（导出 / 导入）
 
 | 编号 | P | 控件 | 操作 | 预期结果 | 依据 / 现状 |
 |---|---|---|---|---|---|
-| TC-SUB-20 | P0 | [导出 OPML](../web/src/views/FeedsView.vue#L184) | 点 | `GET /api/opml` → `application/opml+xml` + `Content-Disposition: attachment; filename="subscriptions-YYYYMMDD-HHmm.opml"`（UTC 戳，两次导出不互相覆盖）；下载名带 `.opml` 且是 `download` 属性 | [OpmlController.java:39-46](../backend/src/main/java/com/rsshub/adminapi/OpmlController.java#L39) `[自]` `[C]` |
+| TC-SUB-20 | P0 | [导出 OPML](../web/src/views/FeedsView.vue#L292) | 点 | `GET /api/opml` → `application/opml+xml` + `Content-Disposition: attachment; filename="subscriptions-YYYYMMDD-HHmm.opml"`（UTC 戳，两次导出不互相覆盖）；下载名带 `.opml` 且是 `download` 属性 | [OpmlController.java:39-46](../backend/src/main/java/com/rsshub/adminapi/OpmlController.java#L39) `[自]` `[C]` |
 | TC-SUB-21 | P0 | 导出可还原 | 导出 → 在别的阅读器导入 | 订阅与分组一致（需求侧的明确要求写在用户故事，DoD 表**没有 OPML 行**） | [FR-2.6](./design/01-requirements.md#L78) · [01 §6 Must OPML 条](./design/01-requirements.md#L150) `[B]` |
-| TC-SUB-22 | P0 | [导入 OPML](../web/src/views/FeedsView.vue#L187) | 选一个 `.opml` | `POST /api/opml`（文件文本作为 body）→ 提示"OPML 导入：新增 X 条，跳过 Y 条"；表格刷新 | [FeedsView.vue:159-174](../web/src/views/FeedsView.vue#L159) · [OpmlController.java:53-57](../backend/src/main/java/com/rsshub/adminapi/OpmlController.java#L53) `[自]` `[C]` |
+| TC-SUB-22 | P0 | [导入 OPML](../web/src/views/FeedsView.vue#L295) | 选一个 `.opml` | `POST /api/opml`（文件文本作为 body）→ 提示"OPML 导入：新增 X 条，跳过 Y 条"；表格刷新 | [FeedsView.vue:167-182](../web/src/views/FeedsView.vue#L167) · [OpmlController.java:53-57](../backend/src/main/java/com/rsshub/adminapi/OpmlController.java#L53) `[自]` `[C]` |
 | TC-SUB-23 | P0 | 导入的 Content-Type | Windows 上 `.opml` 常被识别为 octet-stream | 仍成功：端点显式 `consumes` 四种类型（xml / text/xml / text/plain / octet-stream） | [OpmlController.java:48-54](../backend/src/main/java/com/rsshub/adminapi/OpmlController.java#L48) `[自]` `[C]` |
-| TC-SUB-24 | P0 | 导入含私网地址 | 文件里放 `http://169.254.169.254/…` | 该条计入 `skipped`，**导入整体继续**；说明文字明写"（已有或被 SSRF 规则拒绝）" | [SubscriptionService.java:241-246](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L241) · [FeedsView.vue:191-193](../web/src/views/FeedsView.vue#L191) `[自]` `[C]` |
-| TC-SUB-25 | P1 | 导入去重 | 文件内同一 `xmlUrl` 出现两次；或库里已存在 | 两次都 `skipped`，只建一行 | [SubscriptionService.java:247-250](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L247) `[自]` |
-| TC-SUB-26 | P1 | 导入不分组的 outline | 只有 `<outline title xmlUrl>` | 仍导入，`groupName` 为空 | [SubscriptionService.java:251](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L251) `[自]` |
-| TC-SUB-27 | P0 | 空文档 | 上传无 `xmlUrl` 的 XML | 400 `no_outlines`（不静默"成功 0 条"） | [SubscriptionService.java:231-234](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L231) `[自]` `[C]` |
-| TC-SUB-28 | P1 | 导入不打扰网络 | 200 条一次导入 | **导入阶段不做发现**（导出器已解析过）；任务按插入顺序每条 +10s 错峰，避免 200 个并发 socket | [SubscriptionService.java:225-227,252-255](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L225) `[自]` `[C]` |
-| TC-SUB-29 | P2 | 文件选择器复位 | 同一个文件连选两次 | 第二次仍触发导入（`input.value=""` 已复位） | [FeedsView.vue:172](../web/src/views/FeedsView.vue#L172) `[B]` |
+| TC-SUB-24 | P0 | 导入含私网地址 | 文件里放 `http://169.254.169.254/…` | 该条计入 `skipped`，**导入整体继续**；说明文字明写"（已有或被 SSRF 规则拒绝）" | [SubscriptionService.java:390-395](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L390) · [FeedsView.vue:299-301](../web/src/views/FeedsView.vue#L299) `[自]` `[C]` |
+| TC-SUB-25 | P1 | 导入去重 | 文件内同一 `xmlUrl` 出现两次；或库里已存在 | 两次都 `skipped`，只建一行 | [SubscriptionService.java:396-399](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L396) `[自]` |
+| TC-SUB-26 | P1 | 导入不分组的 outline | 只有 `<outline title xmlUrl>` | 仍导入，`groupName` 为空 | [SubscriptionService.java:400](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L400) `[自]` |
+| TC-SUB-27 | P0 | 空文档 | 上传无 `xmlUrl` 的 XML | 400 `no_outlines`（不静默"成功 0 条"） | [SubscriptionService.java:380-383](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L380) `[自]` `[C]` |
+| TC-SUB-28 | P1 | 导入不打扰网络 | 200 条一次导入 | **导入阶段不做发现**（导出器已解析过）；任务按插入顺序每条 +10s 错峰，避免 200 个并发 socket | [SubscriptionService.java:374-376,401-404](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L374) `[自]` `[C]` |
+| TC-SUB-29 | P2 | 文件选择器复位 | 同一个文件连选两次 | 第二次仍触发导入（`input.value=""` 已复位） | [FeedsView.vue:180](../web/src/views/FeedsView.vue#L180) `[B]` |
 
 ### 5.3 行内编辑（五个控件）
 
 | 编号 | P | 控件 | 操作 | 预期结果 | 依据 / 现状 |
 |---|---|---|---|---|---|
-| TC-SUB-30 | P1 | [分组输入](../web/src/views/FeedsView.vue#L283) | 改名后失焦（`@change`） | `PATCH /api/feeds/{id}` → 消息"分组已保存"，**返回的整行回写**而不是本地猜 | [FeedsView.vue:101-108](../web/src/views/FeedsView.vue#L101) · [feeds.ts:61-64](../web/src/stores/feeds.ts#L61) `[自]` `[B]` |
+| TC-SUB-30 | P1 | [分组输入](../web/src/views/FeedsView.vue#L476) | 改名后失焦（`@change`） | `PATCH /api/feeds/{id}` → 消息"分组已保存"，**返回的整行回写**而不是本地猜 | [FeedsView.vue:109-116](../web/src/views/FeedsView.vue#L109) · [feeds.ts:61-64](../web/src/stores/feeds.ts#L61) `[自]` `[B]` |
 | TC-SUB-31 | P1 | 清空分组 | 删空后失焦 | 移到"无分组"（空串在 API 里表示"移出分组"，不是"不改"） | [FeedController.java:86-96](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L86) · [FeedRepository.java:188-192](../backend/src/main/java/com/rsshub/feedstore/FeedRepository.java#L188) `[自]` |
-| TC-SUB-32 | P0 | [状态下拉](../web/src/views/FeedsView.vue#L287) | 依次选 `active`/`muted`/`paused` | 三个都是操作员可设值；`paused` **取消**队列任务，切回其他状态**重新排队** | [SubscriptionService.java:42,148-153](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L42) `[自]TaskQueueTest` `[C]` |
-| TC-SUB-33 | P0 | 非操作员状态 | 手工 `PATCH {state:"error"}` / `"gone"` | 400 `bad_state` —— 这两个归抓取器所有，不给手改 | [SubscriptionService.java:136-138](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L136) `[自]` `[C]` |
-| TC-SUB-34 | P2 | 未知旧状态显示 | 行状态是 `error`（抓取器写的） | 下拉仍可读：把当前值作为一个 `disabled` 选项追加，不让界面假装它是 `active` | [FeedsView.vue:291-293](../web/src/views/FeedsView.vue#L291) `[B]` |
-| TC-SUB-35 | P0 | [抓取间隔输入](../web/src/views/FeedsView.vue#L297) | 填 60 后失焦 | `PATCH {intervalMinutes:60}` → 该源按 60 分钟节奏，且**不被站点 `<ttl>` 的下一次刷新覆盖**（操作员列 `fetch_interval_minutes` 与站点列 `ttl_minutes` 分列存储） | [FeedsView.vue:119-126](../web/src/views/FeedsView.vue#L119) · [SubscriptionService.java:139-142](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L139) · [FeedRepository.java:198-202](../backend/src/main/java/com/rsshub/feedstore/FeedRepository.java#L198) `[自]InboxApiTest#intervalAndGroupEditsAreBoundedAndExplicit` `[C]smoke.sh:411-418` |
-| TC-SUB-36 | P0 | 间隔越界 | 手工 `PATCH {intervalMinutes:-1}` 或 `43201` | 400 `bad_interval`（合法：`0`＝跟随站点，或 1 分钟 ~ 30 天）；注意**抓取侧另有 5 分钟地板**：源自称 `ttl=1` 也不会热循环 | [SubscriptionService.java:45,139-142](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L139) · [FetchPolicy.java:80-85](../backend/src/main/java/com/rsshub/feedfetch/FetchPolicy.java#L80) `[自]FetchPolicyTest` `[C]smoke.sh:404-409` |
-| TC-SUB-37 | P2 | ~~轮询占位显示 15~~ → 占位来自本机策略 | 观察空数字框 | **缺陷 D-04 已闭合**：输入框不再写死 15，占位文案是"跟随站点（默认 60 分钟）"，`min` 取 `GET /api/feeds/policy` 的 `minIntervalMinutes`；无覆盖时 `value` 为空 | [FeedsView.vue:298-299](../web/src/views/FeedsView.vue#L298) · [stores/feeds.ts:46-52](../web/src/stores/feeds.ts#L46) · [application.yml:83-84](../backend/src/main/resources/application.yml#L83) `[自]InboxApiTest#theFetchPolicyReflectsTheConfiguredInterval` `[B]` |
-| TC-SUB-38 | P1 | 搬家提示 | `requestedUrl ≠ canonicalUrl` | 行内显示"原地址 …（来源搬过家）" | [FeedsView.vue:277-279](../web/src/views/FeedsView.vue#L277) `[B]` |
-| TC-SUB-39 | P1 | 三列计数 | 观察"未读 / 条目"、"上次抓取"、"下次" | 分别是 `unreadCount/entryCount`、`ago(lastFetchedAt)`+失败次数+错误+平均 ms、`ago(nextFetchAt)`；**队列为空时显示"不在队列"**（就是 `paused`/`gone` 的现场证据） | [FeedsView.vue:304-314](../web/src/views/FeedsView.vue#L304) · [FeedRepository.java:34-38](../backend/src/main/java/com/rsshub/feedstore/FeedRepository.java#L34) `[B]` |
+| TC-SUB-32 | P0 | [状态下拉](../web/src/views/FeedsView.vue#L480) | 依次选 `active`/`muted`/`paused` | 三个都是操作员可设值；`paused` **取消**队列任务，切回其他状态**重新排队** | [SubscriptionService.java:44,292-297](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L44) `[自]TaskQueueTest` `[C]` |
+| TC-SUB-33 | P0 | 非操作员状态 | 手工 `PATCH {state:"error"}` / `"gone"` | 400 `bad_state` —— 这两个归抓取器所有，不给手改 | [SubscriptionService.java:280-282](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L280) `[自]` `[C]` |
+| TC-SUB-34 | P2 | 未知旧状态显示 | 行状态是 `error`（抓取器写的） | 下拉仍可读：把当前值作为一个 `disabled` 选项追加，不让界面假装它是 `active` | [FeedsView.vue:484-486](../web/src/views/FeedsView.vue#L484) `[B]` |
+| TC-SUB-35 | P0 | [抓取间隔输入](../web/src/views/FeedsView.vue#L490) | 填 60 后失焦 | `PATCH {intervalMinutes:60}` → 该源按 60 分钟节奏，且**不被站点 `<ttl>` 的下一次刷新覆盖**（操作员列 `fetch_interval_minutes` 与站点列 `ttl_minutes` 分列存储） | [FeedsView.vue:127-134](../web/src/views/FeedsView.vue#L127) · [SubscriptionService.java:283-286](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L283) · [FeedRepository.java:198-202](../backend/src/main/java/com/rsshub/feedstore/FeedRepository.java#L198) `[自]InboxApiTest#intervalAndGroupEditsAreBoundedAndExplicit` `[C]smoke.sh:411-418` |
+| TC-SUB-36 | P0 | 间隔越界 | 手工 `PATCH {intervalMinutes:-1}` 或 `43201` | 400 `bad_interval`（合法：`0`＝跟随站点，或 1 分钟 ~ 30 天）；注意**抓取侧另有 5 分钟地板**：源自称 `ttl=1` 也不会热循环 | [SubscriptionService.java:47,283-286](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L283) · [FetchPolicy.java:80-85](../backend/src/main/java/com/rsshub/feedfetch/FetchPolicy.java#L80) `[自]FetchPolicyTest` `[C]smoke.sh:404-409` |
+| TC-SUB-37 | P2 | ~~轮询占位显示 15~~ → 占位来自本机策略 | 观察空数字框 | **缺陷 D-04 已闭合**：输入框不再写死 15，占位文案是"跟随站点（默认 60 分钟）"，`min` 取 `GET /api/feeds/policy` 的 `minIntervalMinutes`；无覆盖时 `value` 为空 | [FeedsView.vue:491-492](../web/src/views/FeedsView.vue#L491) · [stores/feeds.ts:46-52](../web/src/stores/feeds.ts#L46) · [application.yml:83-84](../backend/src/main/resources/application.yml#L83) `[自]InboxApiTest#theFetchPolicyReflectsTheConfiguredInterval` `[B]` |
+| TC-SUB-38 | P1 | 搬家提示 | `requestedUrl ≠ canonicalUrl` | 行内显示"原地址 …（来源搬过家）" | [FeedsView.vue:470-472](../web/src/views/FeedsView.vue#L470) `[B]` |
+| TC-SUB-39 | P1 | 三列计数 | 观察"未读 / 条目"、"上次抓取"、"下次" | 分别是 `unreadCount/entryCount`、`ago(lastFetchedAt)`+失败次数+错误+平均 ms、`ago(nextFetchAt)`；**队列为空时显示"不在队列"**（就是 `paused`/`gone` 的现场证据） | [FeedsView.vue:497-507](../web/src/views/FeedsView.vue#L497) · [FeedRepository.java:34-38](../backend/src/main/java/com/rsshub/feedstore/FeedRepository.java#L34) `[B]` |
 
 ### 5.4 行按钮（三个）
 
 | 编号 | P | 控件 | 操作 | 预期结果 | 依据 / 现状 |
 |---|---|---|---|---|---|
-| TC-SUB-40 | P0 | [立即抓取](../web/src/views/FeedsView.vue#L317) | 点 | `POST /api/feeds/{id}/refresh` → **202** `{queued:true,id:n}`；语义是**把 `fire_at` 提前到此刻并唤醒调度器**，不新建行 ⇒ 连点不会堆工作量。按钮的"抓取中…"与最终文案的口径见 TC-SUB-59 | [FeedController.java:104-114](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L104) · [SubscriptionService.java:188-194,202-214](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L188) `[自]FetchNowServiceTest` `[C]smoke.sh:414-418` |
-| TC-SUB-41 | P0 | 对不可调度源点抓取 | 先 `paused`（或 `gone`）再点 | 409 `not_schedulable`，提示"set it active first"。**故意不静默忽略**：按按钮的人以为它是活的 | [SubscriptionService.java:190-192](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L190) `[自]` `[C]` |
-| TC-SUB-42 | P0 | [全部已读](../web/src/views/FeedsView.vue#L322) | 点 | `POST /api/feeds/{id}/read` → `{marked:n}`；未读徽标与计数随之归零；随后 `load()` 重读列表 | [FeedController.java:116-121](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L116) `[自]InboxApiTest` `[B]` |
-| TC-SUB-43 | P0 | [删除](../web/src/views/FeedsView.vue#L323) | 点 | **弹 `window.confirm`**（唯一先确认的行操作，因为级联删条目+任务）；确认后 `DELETE /api/feeds/{id}` → **204**，行消失 | [FeedsView.vue:153-157](../web/src/views/FeedsView.vue#L153) · [FeedController.java:98-102](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L98) `[自]` `[B]` |
-| TC-SUB-44 | P0 | 删除取消 | confirm 选"取消" | 不发请求、行不消失 | [FeedsView.vue:155](../web/src/views/FeedsView.vue#L155) `[B]` |
-| TC-SUB-45 | P1 | 删不存在的源 | `DELETE /api/feeds/999999` | 404 `feed_not_found`（存在性检查在所有写路径前面） | [SubscriptionService.java:177-182,261-269](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L261) `[自]` `[C]` |
+| TC-SUB-40 | P0 | [立即抓取](../web/src/views/FeedsView.vue#L510) | 点 | `POST /api/feeds/{id}/refresh` → **202** `{queued:true,id:n}`；语义是**把 `fire_at` 提前到此刻并唤醒调度器**，不新建行 ⇒ 连点不会堆工作量。按钮的"抓取中…"与最终文案的口径见 TC-SUB-59 | [FeedController.java:104-114](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L104) · [SubscriptionService.java:332-338,341-363](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L332) `[自]FetchNowServiceTest` `[C]smoke.sh:414-418` |
+| TC-SUB-41 | P0 | 对不可调度源点抓取 | 先 `paused`（或 `gone`）再点 | 409 `not_schedulable`，提示"set it active first"。**故意不静默忽略**：按按钮的人以为它是活的 | [SubscriptionService.java:334-336](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L334) `[自]` `[C]` |
+| TC-SUB-42 | P0 | [全部已读](../web/src/views/FeedsView.vue#L515) | 点 | `POST /api/feeds/{id}/read` → `{marked:n}`；未读徽标与计数随之归零；随后 `load()` 重读列表 | [FeedController.java:116-121](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L116) `[自]InboxApiTest` `[B]` |
+| TC-SUB-43 | P0 | [删除](../web/src/views/FeedsView.vue#L516) | 点 | **弹 `window.confirm`**（唯一先确认的行操作，因为级联删条目+任务）；确认后 `DELETE /api/feeds/{id}` → **204**，行消失 | [FeedsView.vue:161-165](../web/src/views/FeedsView.vue#L161) · [FeedController.java:98-102](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L98) `[自]` `[B]` |
+| TC-SUB-44 | P0 | 删除取消 | confirm 选"取消" | 不发请求、行不消失 | [FeedsView.vue:163](../web/src/views/FeedsView.vue#L163) `[B]` |
+| TC-SUB-45 | P1 | 删不存在的源 | `DELETE /api/feeds/999999` | 404 `feed_not_found`（存在性检查在所有写路径前面） | [SubscriptionService.java:321-326,410-418](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L410) `[自]` `[C]` |
 | TC-SUB-46 | P1 | 删除后条目 | 查库 | 该 feed 的 `entry` 与任务一并消失（级联）；其他订阅不受影响 | [FeedRepository.java:212-221](../backend/src/main/java/com/rsshub/feedstore/FeedRepository.java#L212) `[自]` `[C]` |
-| TC-SUB-47 | P1 | 行操作失败可见 | 断网后点任一按钮 | 消息区显示 `code: message` 且转成失败色；表格不出现"看起来成功了"的假象 | [FeedsView.vue:25-32,101-108](../web/src/views/FeedsView.vue#L101) `[B]` |
+| TC-SUB-47 | P1 | 行操作失败可见 | 断网后点任一按钮 | 消息区显示 `code: message` 且转成失败色；表格不出现"看起来成功了"的假象 | [FeedsView.vue:33-40,109-116](../web/src/views/FeedsView.vue#L109) `[B]` |
 
 ---
 
@@ -498,7 +498,7 @@
 | TC-FET-01 | P0 | 200 新内容 | 条目落库、`entry_count`/`unread` 增加；写 `etag/last_modified/last_http_status/avg_fetch_ms/last_change_at`；`fail_count=0`；重排 `fire_at` | [03 §4.3 步 1/7](./design/03-technical-design.md), [03 §4.3 步 7](./design/03-technical-design.md) `[自]FeedFetchServiceTest` |
 | TC-FET-02 | P0 | 304 | 状态算成功、`fail_count=0`、`notfound_streak=0`、写下一次 `fire_at`；**不发正文**；`etag` 缺省时保留原值 | [03 §4.3 步 3](./design/03-technical-design.md) · [rss-guide.md:499](./rss-guide.md#L499) `[自]` |
 | TC-FET-03 | P0 | 请求带条件头 | 第二次请求必须携带 `If-None-Match`（有 etag 时）/`If-Modified-Since`；`Accept` 五值优先级顺序正确；`User-Agent` 每请求显式设置 | [03 §4.3 步 1](./design/03-technical-design.md) · [rss-quickref.md:102](./rss-quickref.md#L102) `[自]` |
-| TC-FET-04 | P0 | 301/308 | 跟随（≤3 跳）且**更新 `canonical_url`**；UI 出现"原地址 …（来源搬过家）" | [03 §4.3 步 3](./design/03-technical-design.md) · [FeedsView.vue:277-279](../web/src/views/FeedsView.vue#L277) `[自]` |
+| TC-FET-04 | P0 | 301/308 | 跟随（≤3 跳）且**更新 `canonical_url`**；UI 出现"原地址 …（来源搬过家）" | [03 §4.3 步 3](./design/03-technical-design.md) · [FeedsView.vue:470-472](../web/src/views/FeedsView.vue#L470) `[自]` |
 | TC-FET-05 | P1 | 302/307 | 跟随但**不改** `canonical_url`，只记日志 | [03 §4.3 步 3](./design/03-technical-design.md) `[自]` |
 | TC-FET-06 | P0 | 410 | `state='gone'`，任务转 `cancelled`，UI"下次"列显示"不在队列"；点"立即抓取"得 409 | [03 §4.3 步 3](./design/03-technical-design.md) · [rss-guide.md:510](./rss-guide.md#L510) `[自]` |
 | TC-FET-07 | P0 | 429 + `Retry-After` | **严格读**该头（秒或 HTTP-date 两种形态都要测）；无头则按退避；**绝不立即重试**，封顶 `backoff-cap` | [03 §4.3 步 3](./design/03-technical-design.md) · [DoD FR-2.2 行](./design/01-requirements.md#L173) `[自]` |
@@ -554,13 +554,13 @@
 | TC-SEC-03 | P0 | `http://10.0.0.5/`、`192.168.x`、`172.16.x`、`100.64.0.0/10`（CGNAT）、`::1`、`fc00::/7`、链路本地、组播、`0.0.0.0` | **全部**拒绝；A/AAAA **逐条**判定，不是"只解析第一个" | [03 §9.2](./design/03-technical-design.md) `[自]`（M0 实测 15 条私网/保留地址，见 [03 §13 M0 段落](./design/03-technical-design.md)） |
 | TC-SEC-04 | P0 | 302/301 **跳到内网** | 每一跳都重新过守卫并拒绝；`max-redirects` 用手动跟随实现，不交给 HTTP 客户端 | [03 §4.3 步 3](./design/03-technical-design.md) · [FetchPolicy.java:17 注释](../backend/src/main/java/com/rsshub/feedfetch/FetchPolicy.java#L17) `[自]FeedFetchServiceTest` `[C]` |
 | TC-SEC-05 | P0 | DNS 重绑定（先解析到公网、再解析到内网） | 校验过的 IP 被**原样钉住**用于本次连接（消 TOCTOU） | [03 §9.2](./design/03-technical-design.md) · [PinnedAddressResolver.java](../backend/src/main/java/com/rsshub/feedfetch/PinnedAddressResolver.java) `[自]DnsPinsTest`（10 项） |
-| TC-SEC-06 | P0 | 非 http(s)：`file://`、`gopher://`、`jar://` | 400 `scheme_not_allowed`（在 normalise 层拒，消息比守卫精确） | [SubscriptionService.java:281-284](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L281) `[自]` `[C]` |
+| TC-SEC-06 | P0 | 非 http(s)：`file://`、`gopher://`、`jar://` | 400 `scheme_not_allowed`（在 normalise 层拒，消息比守卫精确） | [SubscriptionService.java:430-433](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L430) `[自]` `[C]` |
 | TC-SEC-07 | P1 | 私网白名单 | `rsshub.ssrf.allow-private-prefixes` 显式登记后**内网源可订阅**，且日志记"用户显式授权"；默认空 ⇒ 无私网例外 | [application.yml:73-75](../backend/src/main/resources/application.yml#L73) · [03 §9.2](./design/03-technical-design.md) `[自]`（白名单是唯一回门） |
 | TC-SEC-08 | P0 | 日志脱敏 | 检查 `.dev-logs/backend.log`：不出现 token / `Authorization` / `Cookie` 值 | [03 §9.2 配套](./design/03-technical-design.md) `[B/C 人工读日志]` |
 | TC-SEC-09 | P0 | actuator 面 | 配置只暴露 `health` 且 `show-details: never`；**测试不去探测 `heapdump`/`shutdown`**，只核配置与 `SecurityConfig` 的匹配器 | [application.yml:47-59](../backend/src/main/resources/application.yml#L47) `[自]AuthGateTest` |
 | TC-SEC-10 | P0 | 口令来源 | 空库 + 空口令 → **拒绝启动**（杜绝默认口令上线）；口令只在 `backend/dev.env`（已被 gitignore）与环境变量里 | [application.yml:69-72](../backend/src/main/resources/application.yml#L69) · [start-dev.sh](../start-dev.sh) 前置检查 `[C 用一次性内存库验]` |
 | TC-SEC-11 | P1 | 口令哈希口径 | 库里是 `{bcrypt}` 前缀的 delegating 编码；**Argon2id 尚未落地（O7）**，测试断言"前缀可辨识 + 非明文"，不断言算法 | [03 §9.1 落地表](./design/03-technical-design.md), [03 §14 O7](./design/03-technical-design.md) `[自]` |
-| TC-SEC-12 | P1 | 错误信息不泄漏 | 私网地址被拒时，返回给前端的消息**不含内网拓扑细节** | [SubscriptionService.java:271-274 注释](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L271) `[C]` |
+| TC-SEC-12 | P1 | 错误信息不泄漏 | 私网地址被拒时，返回给前端的消息**不含内网拓扑细节** | [SubscriptionService.java:420-423 注释](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L420) `[C]` |
 
 > 本轮**不执行**的两类动作（硬性约束）：浏览器自动化跑登录流、读取或比对口令字段/哈希。口令只向操作员索取，绝不猜、绝不写进脚本。
 
@@ -605,7 +605,7 @@
 | D-01 | 需求写 `/feed/rss`、`/feed/atom`、`/feed/json`；实现与 03 都是 `/feed.{format}` | **实现**（后缀式更稳，且满足"页面 URL 与 feed URL 不能相同"） | ✅ 已改 01 FR-1.2 措辞；本文按 `/feed.rss` 执行 | [01 FR-1.2](./design/01-requirements.md#L65) vs [03 §6.2](./design/03-technical-design.md) · [rss-guide.md:548](./rss-guide.md#L548) |
 | D-02 | 03 §10 契约表写 `POST /api/posts/{id}/publish` | **实现**：`PATCH /api/posts/{id}/status` | ✅ 已改 03 §10 该行 | [03 §10](./design/03-technical-design.md) vs [PostController.java:64](../backend/src/main/java/com/rsshub/adminapi/PostController.java#L64) |
 | D-03 | 收件箱空态说"抓取每 15 分钟一轮" | **配置**（`rsshub.fetch.interval: 60m`；15 秒只是队列唤醒节拍） | ✅ 文案已改为"抓取按每个来源的节奏，默认一小时一轮" | [InboxView.vue:152](../web/src/views/InboxView.vue#L152) vs [application.yml:83-84](../backend/src/main/resources/application.yml#L83) · [FetchDispatcher.java:62](../backend/src/main/java/com/rsshub/feedfetch/FetchDispatcher.java#L62) |
-| D-04 | 订阅管理"轮询"列占位显示 15 | **配置**（缺覆盖时真实节奏是 `interval`=60 分钟，再被 `min-interval`=5 分钟夹） | ✅ F10 闭合：无覆盖时输入框留空、占位与 `min` 都取 `GET /api/feeds/policy` 的本机数字；空框提交 `0`＝交还站点 | [FeedsView.vue:296-302](../web/src/views/FeedsView.vue#L296) · [stores/feeds.ts:46-52](../web/src/stores/feeds.ts#L46) vs [FetchPolicy.java:80-85](../backend/src/main/java/com/rsshub/feedfetch/FetchPolicy.java#L80) |
+| D-04 | 订阅管理"轮询"列占位显示 15 | **配置**（缺覆盖时真实节奏是 `interval`=60 分钟，再被 `min-interval`=5 分钟夹） | ✅ F10 闭合：无覆盖时输入框留空、占位与 `min` 都取 `GET /api/feeds/policy` 的本机数字；空框提交 `0`＝交还站点 | [FeedsView.vue:489-495](../web/src/views/FeedsView.vue#L489) · [stores/feeds.ts:46-52](../web/src/stores/feeds.ts#L46) vs [FetchPolicy.java:80-85](../backend/src/main/java/com/rsshub/feedfetch/FetchPolicy.java#L80) |
 | D-05 | 会话 cookie 无 `Secure`（设计 03 §9.1 要求 `HttpOnly; Secure; SameSite=Lax`） | **现状可接受**：本机明文 `localhost` 下加 `Secure` 就发不出去 | 上 TLS 时一起打开，测试时按"未实现"记，不算回归失败 | [application.yml:15-18](../backend/src/main/resources/application.yml#L15) · [03 §9.1 表](./design/03-technical-design.md) |
 | D-06 | 03 §11 说构建产物 `dist/` 由 Caddy 服务、`/api` 反代 | **现状**：开发期由 Vite 代理；`deploy/` 推迟 | ✅ 文档已补"当前只有 Vite 代理，Caddy 属 deploy 里程碑" | [03 §11](./design/03-technical-design.md) vs [start-dev.sh](../start-dev.sh) |
 | D-07 | `application.yml` 用 `DB_URL`，03 §12.1 计划 `RSSHUB_DB_URL` | **现状**（未统一） | 与 `deploy/.env.example` 一起统一（O10） | [03 §12.1 M0 实况表](./design/03-technical-design.md), [03 §14 O10](./design/03-technical-design.md) |
@@ -616,11 +616,11 @@
 
 ### 14.1 一轮完整功能测试的顺序（约 3.5 人时，`[自]`+`[C]` 部分）
 
-1. `cd backend && ./mvnw verify` → 397 项全绿（这是所有 `[自]` 用例的集体执行，覆盖 38 个测试类；F10/F11 后口径，此前第二~七轮分别是 264/343/360/370/380/382）。**必须先跑**，因为 `jar` 被运行中的后端占用时 `package` 会失败（第八轮又撞到一次，见 24.4 与 [03 §14 O25](./design/03-technical-design.md)）。
-   > **复算口径**：以 Maven 汇总行 `Tests run: 397, Failures: 0, Errors: 0, Skipped: 0` 为准，**不要**拿 `target/surefire-reports/` 的和数当准。两个原因：`MarkdownRendererTest`、`SlugPolicyTest`、`FeedWritersTest` 三个类共 10 个 `@Nested` 子组，子组计数写在 Maven 控制台（本轮实测控制台 46 行"Tests run … -- in"，surefire 的 `.txt` 只有 38 行）而不并入外层 `.txt`；而 `*.xml` 的 `tests=` 求和**本轮恰好等于 397**（38 个 XML 实测），这只说明这一轮子组都写进了各自外层 XML，属于"这一轮碰巧对得上"，不是可以放心换轮的算法。别拿偏小的和数报"文档虚报"。
+1. `cd backend && ./mvnw verify` → 421 项全绿（这是所有 `[自]` 用例的集体执行，覆盖 40 个测试类；F16 后口径，此前第二~七轮分别是 264/343/360/370/380/382，第八~十一轮均为 397）。**必须先跑**，因为 `jar` 被运行中的后端占用时 `package` 会失败（第八轮又撞到一次，见 24.4 与 [03 §14 O25](./design/03-technical-design.md)）。
+   > **复算口径**：以 Maven 汇总行 `Tests run: 421, Failures: 0, Errors: 0, Skipped: 0` 为准，**不要**拿 `target/surefire-reports/` 的和数当准。两个原因：`MarkdownRendererTest`、`SlugPolicyTest`、`FeedWritersTest` 三个类共 10 个 `@Nested` 子组，子组计数写在 Maven 控制台（本轮实测控制台 50 行"Tests run … -- in"——40 个外层类 + 10 个子组，其中三个带子组的外层类那一行是 `Tests run: 0`、计数全落在子组行上；surefire 的 `.txt` 只有 40 份、求和 **376**（本轮实测，差的就是那 10 个子组）而不并入外层 `.txt`；而 `*.xml` 的 `tests=` 求和**本轮恰好等于 421**（40 个 XML 实测），这只说明这一轮子组都写进了各自外层 XML，属于"这一轮碰巧对得上"，不是可以放心换轮的算法。别拿偏小的和数报"文档虚报"。
 2. `cd web && npm run build`（含 `vue-tsc` 类型检查）→ 0 错。
 3. 起服务：`bash start-dev.sh`（该脚本的 `"../$LOG_DIR/…"` 绝对路径坑已在 2026-10-18 第二轮修掉，见第 18 节 R-08；jar 被占用时先 `bash start-dev.sh stop`）。
-4. 跑 `[C]` 序列：先起 `:19999` 的有状态 fixture（`node .dev-logs/smoke-feed-server.js`，第八轮重启过，见 24.4），再对一次性实例执行 `SMOKE_PASS=<临时口令> bash backend/smoke.sh`（205 项，M0 会话/CSRF → M1 订阅与条件抓取 → M3 规则/令牌/摄入 → M3.5 设置/大屏/状态 → M5 聚合再分发与公开出口 → F1.6 变更公告与变更轨迹 → F2.4 收件箱两个过滤 → F2.4 尾段"每页条数由设置决定" → **F10 订阅编辑与立即抓取** → **F11 大屏五条轨对账** → **F15 标签/分类切片与独立计数路由** → 登出；环境与启动命令见 20.4 节，M5 段实录见 21.3 节，F1.6 段实录见 22.3 节，F2.4 段与尾段实录见 23.3/23.4 节，F10/F11 段实录见 24.4 节，F15 段实录见 24.8 节）。附录 A 是各步骤的展开参考与手工复现路径。
+4. 跑 `[C]` 序列：先起 `:19999` 的有状态 fixture（`node .dev-logs/smoke-feed-server.js`，第八轮重启过，见 24.4），再对一次性实例执行 `SMOKE_PASS=<临时口令> bash backend/smoke.sh`（222 项，M0 会话/CSRF → M1 订阅与条件抓取 → M3 规则/令牌/摄入 → M3.5 设置/大屏/状态 → M5 聚合再分发与公开出口 → F1.6 变更公告与变更轨迹 → F2.4 收件箱两个过滤 → F2.4 尾段"每页条数由设置决定" → **F10 订阅编辑与立即抓取** → **F11 大屏五条轨对账** → **F15 标签/分类切片与独立计数路由** → **F16 批量订阅（解析/写入/上限/匿名）** → 登出；环境与启动命令见 20.4 节，M5 段实录见 21.3 节，F1.6 段实录见 22.3 节，F2.4 段与尾段实录见 23.3/23.4 节，F10/F11 段实录见 24.4 节，F15 段实录见 24.8 节，F16 段实录见 25.4 节）。附录 A 是各步骤的展开参考与手工复现路径。
 5. 破坏性用例（删除订阅/文章、OPML 导入）在副本库上做，做完丢弃。
 6. `[B]` 用例：只有这一轮需要人坐在屏幕前点。
 
@@ -642,8 +642,8 @@
 
 **可交付判定（全部满足才算通过）** —— 2026-10-18 第二轮逐条判定见第 18.4 节
 1. 所有 P0 用例通过；P1 缺陷登记且有明确规避说明；P2 可延后。→ **达成**（`[自]`+`[C]` 范围内；`[B]` 仍未执行，见第 16 节）
-2. `./mvnw verify` 全绿（第二轮实测 264 项；第三~八轮以 343/360/370/380/382/397 项全量复测，口径见第 14.1 节）；`npm run build` 0 类型错误。→ **达成**
-3. 附录 A 的 `[C]` 序列在本机真实 HTTP 上跑通（不是 MockMvc）。→ **达成**（一次性库 + 临时口令的 :18080 实例，含真抓取与 304；第五轮再加 M5 的公开出口与全文开关，86 项 `ALL PASS`，见 21.3；第七轮再加 F2.4 的两个过滤与"页大小由设置决定"的尾段，150 项 `ALL PASS`，见 23.3/23.4；**第八轮再加 F10 的订阅编辑/立即抓取与 F11 的五条轨对账，收口 193 项 `ALL PASS`**（`.dev-logs/f11-smoke.log`：193 条 `PASS`、0 条 `FAIL`），见 24.4）
+2. `./mvnw verify` 全绿（第二轮实测 264 项；第三~八轮以 343/360/370/380/382/397 项全量复测，第九~十一轮维持 397，第十二轮 **421**，口径见第 14.1 节）；`npm run build` 0 类型错误。→ **达成**
+3. 附录 A 的 `[C]` 序列在本机真实 HTTP 上跑通（不是 MockMvc）。→ **达成**（一次性库 + 临时口令的 :18080 实例，含真抓取与 304；第五轮再加 M5 的公开出口与全文开关，86 项 `ALL PASS`，见 21.3；第七轮再加 F2.4 的两个过滤与"页大小由设置决定"的尾段，150 项 `ALL PASS`，见 23.3/23.4；**第八轮再加 F10 的订阅编辑/立即抓取与 F11 的五条轨对账，收口 193 项 `ALL PASS`**（`.dev-logs/f11-smoke.log`：193 条 `PASS`、0 条 `FAIL`），见 24.4；第十一轮补 GAP-1/GAP-3 到 205 项，见 24.8；**第十二轮再加 F16 批量订阅（拆分读法 / 两个端点 / 200 条上限 / 匿名拒绝），收口 222 项 `ALL PASS`**（`.dev-logs/f16b-smoke.log`：222 条 `PASS`、0 条 `FAIL`），见 25.4）
 4. 三个公开出口可被严格 XML/JSON 解析器解析（TC-PUB-34 的本地部分）。→ **达成**（JDK DocumentBuilder + `JSON.parse`）
 5. 第 12 节每一条阻塞项都在交付说明里被点名，不出现"看起来测过了"的灰色区域。→ **达成**（第 18.5 节逐条点名 BLK-01..12）
 
@@ -669,7 +669,7 @@
 
 - 本文是**从需求文档 + 设计文档 + 实际代码逐条对照**产出的，每个控件与端点都在源码里存在，行号已回读核对。
 - **所有 `[B]` 用例（浏览器渲染与交互）本轮未执行，未在浏览器复核。** 包括但不限于登录回跳、按钮禁用观感、模态确认框、预览渲染外观、三栏布局。
-- 已执行并验证过的部分：`./mvnw` 全量测试（第二轮 264 项 → M3.5 后 360 项，0 失败）、`npm run build`（0 错）、以及 2026-10-18 第二轮**完整真 HTTP curl 冒烟**——一次性文件库 + 自造临时口令的 :18080 实例，覆盖登录与 CSRF 轮换、订阅、本地固定源的真实抓取（首轮 baseline、源未变 304、源变更后新条目）、发文（含 CJK/emoji/转义）、三格式严格解析、条件请求四种写法、匿名不建会话、SSRF 与协议负例、OPML 导出与四种 content-type 导入、状态机全对、登出复用、日志脱敏。逐条结果与缺陷登记见第 18 节；第四轮把 M3/M3.5 新端点（rules/notifications/events/settings/dashboard/system；totp 留在 `[自]` 覆盖）补进 `backend/smoke.sh` 后对一次性实例全量重跑，55 项 `ALL PASS`（实录见 20.4 节），至此 `[C]` 面覆盖 M0–M3.5。第五轮（2026-10-31）给 `backend/smoke.sh` 加 M5 段（`/api/repacks` 九个端点 + `/repack/{slug}.{format}` 三格式出口 + 摘要缺省与全文开关 + 审计 + ETag/304）后删库重跑，**86 项 `ALL PASS`**，`[C]` 面覆盖 M0–M3.5 + M5（实录见 21.3 节；`RPL` 的 `[B]` 部分同样未在浏览器复核）。第六轮（2026-11-01）给 `backend/smoke.sh` 加 F1.6 段（43 条：`GET /api/changelog` 的 401/405/`postId`/`limit` 夹取、草稿零行与"从未公开的删除也零行"两条负例、四类动作各一行、`<category>`、URN guid、与站点源不同的 ETag 与 304、三格式、`.opml` 404、`/blog` 的发现链接、删文后 5 行仍活）后删库重跑，**129 项 `ALL PASS`**，`[C]` 面覆盖 M0–M3.5 + M5 + F1.6（实录见 22.3 节；`CHG` 的 `[B]` 部分同样未在浏览器复核）。**第七轮（2026-11-01）**给 `backend/smoke.sh` 加 F2.4 段（15 条：事件流翻进收件箱后一条摄入同时给出标签行与命中行、`category=` 的整元素/第二元素/前缀/空串四种判据、`alerted=true` 的行带 `alertedBy`、`true`+`false` 之和等于不过滤、与 `q=`/`limit=` 的组合、单条命中不给 `nextCursor`、`alerted=maybe` 得 400 `urn:rsshub:bad_alerted`）后删库重跑，**144 项 `ALL PASS`**，并在两个独立一次性库（`.dev-logs/smoke-f24b`、`smoke-f24c`）上各复跑一遍；**同一轮写文档时捞出 FR-9.2 的一处旧欠账**——[entries.ts](../web/src/stores/entries.ts#L65) 硬发 `limit: 50`，让设置项"收件箱每页条数"在真实客户端里形同摆设（`[自]SettingsApiTest#steersTheInboxDefault` 只钉住后端契约，掩盖了端到端没走那条路）——修掉之后再加 **6 条尾段**（PATCH `inbox.pageSize=10` → 一个不带 `limit` 的请求只得 10 条并拿到游标 → 徽标仍是全局数 → 还原 50 → 页数跟着变回去），收口 **150 项**，又在两个全新独立一次性库（`.dev-logs/smoke-f24e`、`smoke-f24f`）各复跑一遍，两次都是 150 条 `PASS` / 0 条 `FAIL` / 末行 `ALL PASS`；`./mvnw -o -B -ntp verify` 同时 **382 项 0 失败**（产品 Java 一行未改）、`npm run build` **92 modules / 183.39 kB JS / 26.90 kB CSS** 且 0 类型错误、Flyway 迁到 **V6**（`Successfully applied 6 migrations`）。`[C]` 面覆盖 M0–M3.5 + M5 + F1.6 + F2.4（实录见 23.3 与 23.4 节；**F2.4 的 `[B]` 部分——键盘流、权限弹窗、桌面通知观感、标签 chip 可见性——同样未在浏览器复核，且这一部分没有第三方可自动化的替身**，登记为 [03 §14 O23](./design/03-technical-design.md)）。**第八轮（2026-11-02）**给 `backend/smoke.sh` 加 F10 段（21 条：`/api/feeds/policy` 报出本机节奏、改名只写操作员列且收件箱/健康度同源同名、带地址的 PATCH 得 400 `urn:rsshub:unknown_field` 且地址原地不动、`intervalMinutes` 的负数/30 天上界/30 天整可写、15 分钟覆盖不被站点 `<ttl>` 拽回、`0` 交还站点后下一轮回到一小时、空标题把命名交回 `<title>`）与 F11 段（22 条：恒 24 根柱且两端相距 23 小时、柱和等于头条数、大屏的条目/未读数就是收件箱的数、每源一卡、告警轨带规则名与条目名、发布轨与轨迹轨的目录/历史之别、安静订阅只有推流事件源），在 `.dev-logs/f11-smoke.log` 收口 **193 条 PASS / 0 条 FAIL / 末行 ALL PASS**；`./mvnw -o -B -ntp verify` 同时 **397 项 0 失败 / 38 个测试类**、`npm run build` **93 modules / 190.20 kB JS / 42.40 kB CSS** 且 0 类型错误、Flyway 迁到 **V7**（`feed.custom_title` + `feed.fetch_interval_minutes` 两列，两个方言各一份）。`[C]` 面覆盖 M0–M3.5 + M5 + F1.6 + F2.4 + F10 + F11。**这一轮的 `[B]` 面最大**：F10 的就地编辑手感、F11 的五条轨排版、F12 的全部观感（mica/圆角/阴影/悬停/焦点环）都**未在浏览器复核**；F12 只留下三条可机器复核的替代证据（构建 0 错、色值 grep 归零、`/login` 的 `getComputedStyle`），且截图工具在本机返回 `NATIVE_BROWSER_VIEWPORT_UNAVAILABLE`，登记为 [03 §14 O24](./design/03-technical-design.md)。
+- 已执行并验证过的部分：`./mvnw` 全量测试（第二轮 264 项 → M3.5 后 360 项，0 失败）、`npm run build`（0 错）、以及 2026-10-18 第二轮**完整真 HTTP curl 冒烟**——一次性文件库 + 自造临时口令的 :18080 实例，覆盖登录与 CSRF 轮换、订阅、本地固定源的真实抓取（首轮 baseline、源未变 304、源变更后新条目）、发文（含 CJK/emoji/转义）、三格式严格解析、条件请求四种写法、匿名不建会话、SSRF 与协议负例、OPML 导出与四种 content-type 导入、状态机全对、登出复用、日志脱敏。逐条结果与缺陷登记见第 18 节；第四轮把 M3/M3.5 新端点（rules/notifications/events/settings/dashboard/system；totp 留在 `[自]` 覆盖）补进 `backend/smoke.sh` 后对一次性实例全量重跑，55 项 `ALL PASS`（实录见 20.4 节），至此 `[C]` 面覆盖 M0–M3.5。第五轮（2026-10-31）给 `backend/smoke.sh` 加 M5 段（`/api/repacks` 九个端点 + `/repack/{slug}.{format}` 三格式出口 + 摘要缺省与全文开关 + 审计 + ETag/304）后删库重跑，**86 项 `ALL PASS`**，`[C]` 面覆盖 M0–M3.5 + M5（实录见 21.3 节；`RPL` 的 `[B]` 部分同样未在浏览器复核）。第六轮（2026-11-01）给 `backend/smoke.sh` 加 F1.6 段（43 条：`GET /api/changelog` 的 401/405/`postId`/`limit` 夹取、草稿零行与"从未公开的删除也零行"两条负例、四类动作各一行、`<category>`、URN guid、与站点源不同的 ETag 与 304、三格式、`.opml` 404、`/blog` 的发现链接、删文后 5 行仍活）后删库重跑，**129 项 `ALL PASS`**，`[C]` 面覆盖 M0–M3.5 + M5 + F1.6（实录见 22.3 节；`CHG` 的 `[B]` 部分同样未在浏览器复核）。**第七轮（2026-11-01）**给 `backend/smoke.sh` 加 F2.4 段（15 条：事件流翻进收件箱后一条摄入同时给出标签行与命中行、`category=` 的整元素/第二元素/前缀/空串四种判据、`alerted=true` 的行带 `alertedBy`、`true`+`false` 之和等于不过滤、与 `q=`/`limit=` 的组合、单条命中不给 `nextCursor`、`alerted=maybe` 得 400 `urn:rsshub:bad_alerted`）后删库重跑，**144 项 `ALL PASS`**，并在两个独立一次性库（`.dev-logs/smoke-f24b`、`smoke-f24c`）上各复跑一遍；**同一轮写文档时捞出 FR-9.2 的一处旧欠账**——[entries.ts](../web/src/stores/entries.ts#L65) 硬发 `limit: 50`，让设置项"收件箱每页条数"在真实客户端里形同摆设（`[自]SettingsApiTest#steersTheInboxDefault` 只钉住后端契约，掩盖了端到端没走那条路）——修掉之后再加 **6 条尾段**（PATCH `inbox.pageSize=10` → 一个不带 `limit` 的请求只得 10 条并拿到游标 → 徽标仍是全局数 → 还原 50 → 页数跟着变回去），收口 **150 项**，又在两个全新独立一次性库（`.dev-logs/smoke-f24e`、`smoke-f24f`）各复跑一遍，两次都是 150 条 `PASS` / 0 条 `FAIL` / 末行 `ALL PASS`；`./mvnw -o -B -ntp verify` 同时 **382 项 0 失败**（产品 Java 一行未改）、`npm run build` **92 modules / 183.39 kB JS / 26.90 kB CSS** 且 0 类型错误、Flyway 迁到 **V6**（`Successfully applied 6 migrations`）。`[C]` 面覆盖 M0–M3.5 + M5 + F1.6 + F2.4（实录见 23.3 与 23.4 节；**F2.4 的 `[B]` 部分——键盘流、权限弹窗、桌面通知观感、标签 chip 可见性——同样未在浏览器复核，且这一部分没有第三方可自动化的替身**，登记为 [03 §14 O23](./design/03-technical-design.md)）。**第八轮（2026-11-02）**给 `backend/smoke.sh` 加 F10 段（21 条：`/api/feeds/policy` 报出本机节奏、改名只写操作员列且收件箱/健康度同源同名、带地址的 PATCH 得 400 `urn:rsshub:unknown_field` 且地址原地不动、`intervalMinutes` 的负数/30 天上界/30 天整可写、15 分钟覆盖不被站点 `<ttl>` 拽回、`0` 交还站点后下一轮回到一小时、空标题把命名交回 `<title>`）与 F11 段（22 条：恒 24 根柱且两端相距 23 小时、柱和等于头条数、大屏的条目/未读数就是收件箱的数、每源一卡、告警轨带规则名与条目名、发布轨与轨迹轨的目录/历史之别、安静订阅只有推流事件源），在 `.dev-logs/f11-smoke.log` 收口 **193 条 PASS / 0 条 FAIL / 末行 ALL PASS**；`./mvnw -o -B -ntp verify` 同时 **397 项 0 失败 / 38 个测试类**、`npm run build` **93 modules / 190.20 kB JS / 42.40 kB CSS** 且 0 类型错误、Flyway 迁到 **V7**（`feed.custom_title` + `feed.fetch_interval_minutes` 两列，两个方言各一份）。`[C]` 面覆盖 M0–M3.5 + M5 + F1.6 + F2.4 + F10 + F11。**第九~十一轮（F13 Bootstrap 迁移 / F14 淡蓝色调 / F15 覆盖面收口）**是两轮纯前端 + 一轮审计：后端测试数在 397 上不动（F15 只在既有测试方法里加断言、不新增方法），`[C]` 从 193 项到 **205 项**（+GAP-1 的 4 条计数路由、+GAP-3 的 8 条术语切片），实录分别见 24.6 / 24.7 / 24.8。**第十二轮（F16 批量订阅）**给 `backend/smoke.sh` 加 F16 段 17 条（plan 读满五行、只把两条算 ready、内网 refused 带原因、非 http 判 invalid、读不懂的行仍占一行、plan 零写入、写入 2 条 + 名字成标题 + 整批同组 + 排好抓取、错开 10 s、批量不发请求、重复算 already_subscribed 且整批 200、超 200 条 400 `urn:rsshub:too_many_lines` 且不写半批、匿名 4 字头），`[C]` 收口 **222 项 `ALL PASS`**、`[自]` 从 397 到 **421**（拆分器 12 + 两个端点 12），实录见 25.4。`[C]` 面至此覆盖 M0–M3.5 + M5 + F1.6 + F2.4 + F10 + F11 + F15 + F16。**这一轮的 `[B]` 面最大**：F10 的就地编辑手感、F11 的五条轨排版、F12 的全部观感（mica/圆角/阴影/悬停/焦点环）都**未在浏览器复核**；F12 只留下三条可机器复核的替代证据（构建 0 错、色值 grep 归零、`/login` 的 `getComputedStyle`），且截图工具在本机返回 `NATIVE_BROWSER_VIEWPORT_UNAVAILABLE`，登记为 [03 §14 O24](./design/03-technical-design.md)。
 - 明确不做的验证动作：浏览器自动化跑登录流、读取/比对口令字段或哈希、探测敏感 actuator 端点（含 HEAD）。这些位置一律以配置核对 + 既有自动化断言代替，并在结论里写"该处未复核"。
 - 公网 Feed Validator、Apple 目录提交、真实 IM 通道端到端推送：**需要公网与账号，属上线后人工动作**，不在 CI 假设范围内（[03 §13 末段](./design/03-technical-design.md)）。
 
@@ -890,7 +890,7 @@ BLK-01 键盘流/桌面通知/未读轮询、BLK-02 `/feed/changelog.xml`、BLK-
 
 ### 20.4 第四轮 `[C]` 执行实录（2026-10-18，M0–M3.5 全链路真 HTTP）
 
-**工具**：[backend/smoke.sh](../backend/smoke.sh) 从 M0 的 14 项扩到 **55 项**（第四轮当时口径；此后每轮只追加不删除，现 **205 项**，见 §0.3 与 24.8），一次跑完：M0 会话/CSRF 卫生 → M3/M3.5 各操作员端点的匿名 401 与缺 CSRF 拦截 → M1 订阅 + 首抓基线 + 未变 304 + 变更后新条目（fixture 源上的真实条件请求）→ M3 规则/试跑按钮/机器令牌/Bearer 摄入/dedupe 重放/公开事件源 → M3.5 设置缺省-PATCH-持久化-双 400 负例/大屏回显-单卡-截断-未读角标/系统状态五组事实 → 登出与 trace 收尾。本节标 `[C]` 的 TC-SET-07、TC-SYS-06 由本段覆盖（`[B]` 仍留人工）。
+**工具**：[backend/smoke.sh](../backend/smoke.sh) 从 M0 的 14 项扩到 **55 项**（第四轮当时口径；此后每轮只追加不删除，现 **222 项**，见 §0.3 与 25.4），一次跑完：M0 会话/CSRF 卫生 → M3/M3.5 各操作员端点的匿名 401 与缺 CSRF 拦截 → M1 订阅 + 首抓基线 + 未变 304 + 变更后新条目（fixture 源上的真实条件请求）→ M3 规则/试跑按钮/机器令牌/Bearer 摄入/dedupe 重放/公开事件源 → M3.5 设置缺省-PATCH-持久化-双 400 负例/大屏回显-单卡-截断-未读角标/系统状态五组事实 → 登出与 trace 收尾。本节标 `[C]` 的 TC-SET-07、TC-SYS-06 由本段覆盖（`[B]` 仍留人工）。
 
 **环境**（§0.5"不动开发库"口径）：一次性 `:18080` 实例——`DB_URL=jdbc:h2:file:./.dev-logs/smoke-db` 全新空库（跑完即删）、口令为运行时自造的临时值（只经环境变量进进程，未读未记真实口令）、`--rsshub.ssrf.allow-private-prefixes=127.`（仅为放行本机 fixture 源 `:19999`，产品默认空清单不变）；被测 jar 为同日 `./mvnw verify` 360 项全绿后重新打包的产物。启动与 Flyway 迁移日志：`.dev-logs/smoke-backend.log`（全新库从 V1 迁到 V3；该文件已覆盖第二轮同名日志）。
 
@@ -1121,19 +1121,19 @@ BLK-01 键盘流/桌面通知/未读轮询、BLK-02 `/feed/changelog.xml`、BLK-
 
 | 编号 | P | 控件 | 操作 | 预期结果 | 依据 / 现状 |
 |---|---|---|---|---|---|
-| TC-SUB-48 | P0 | [解析] 前的清空 | 解析 A → 把地址改成 B | A 的候选列表、选中项、上一条提示**全部消失**（`resetDiscovery` 四件套：discovery/chosen/message/failed），添加按钮不能拿着 A 的地址提交 | [FeedsView.vue:44-53](../web/src/views/FeedsView.vue#L44) · 改地址即触发 [:56](../web/src/views/FeedsView.vue#L56) 的 `watch` `[B]` |
-| TC-SUB-49 | P0 | 解析失败的清空 | 解析一个非 feed 地址 | 失败态同样清空候选与选中项，`chosen` 归空 ⇒ 不会出现"上一次解析还能添加" | [FeedsView.vue:69-73](../web/src/views/FeedsView.vue#L69) `[B]` |
-| TC-SUB-50 | P1 | 候选行的 [直接添加] | 不选 radio，直接点某条候选后面的按钮 | 订阅的是**这一条**候选，与 `chosen` 无关（`add(candidate.url)` 显式传参，`add()` 的第一优先参数就是它） | [FeedsView.vue:234](../web/src/views/FeedsView.vue#L234) · [:78-80](../web/src/views/FeedsView.vue#L78) `[B]` |
-| TC-SUB-51 | P0 | 订阅标题就地编辑 | 改标题后失焦 | `PATCH /api/feeds/{id}` 带 `{title}` → 返回整行回写；消息"标题已保存"；**收件箱与健康度页同源同名**（读同一列，不是三处各存一份） | [FeedsView.vue:110-116](../web/src/views/FeedsView.vue#L110) · [SubscriptionService.java:131-147](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L131) `[自]InboxApiTest#aFeedCanBeRenamedButNeverRepointed` `[C]smoke.sh:380-387` |
-| TC-SUB-52 | P0 | 标题交还给站点 | 清空标题后失焦 | 空串写 `NULL` 覆盖列，显示回落到站点自己的 `<title>`；消息仍是"标题已保存" | [FeedsView.vue:272-273](../web/src/views/FeedsView.vue#L272) · [api/feeds.ts:58-68](../web/src/api/feeds.ts#L58) `[C]smoke.sh:429-432`（改回后 `feedTitle` 变回 "Smoke source"） |
-| TC-SUB-53 | P0 | 地址不可更改 | 悬停行内的地址链接 | `title` 提示明写"换地址请删除后重新订阅，条目与队列都挂在它上面"；页面上没有让地址变成输入框的入口 | [FeedsView.vue:274-277](../web/src/views/FeedsView.vue#L274) `[B]` |
-| TC-SUB-54 | P0 | 绕过页面改地址 | `PATCH {"canonicalUrl":"…"}` 或 `{"requestedUrl":"…}` | **400 `urn:rsshub:unknown_field`**，且消息里点名被拒的键；地址一格未动。**故意不"忽略未知键"**：200 + 什么都没改，操作员会以为搬家成功了 | [SubscriptionService.java:50-51](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L50) · [:125-129](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L125) `[自]` 同上 `[C]smoke.sh:390-398` |
-| TC-SUB-55 | P0 | 抓取间隔就地编辑 | 填 15 后失焦 | `PATCH {intervalMinutes:15}` → `fetchIntervalMinutes:15`；**下一轮抓取后仍是 15**（覆盖列与站点 `<ttl>` 分列存储，抓取只写后者） | [FeedsView.vue:118-126](../web/src/views/FeedsView.vue#L118) · [smoke.sh:411-418](../backend/smoke.sh#L411) `[自]InboxApiTest#intervalAndGroupEditsAreBoundedAndExplicit` `[C]` |
-| TC-SUB-56 | P0 | 间隔交还给站点 | 清空数字框后失焦 | 空框在页面侧换算成 `0`，`0` 在 API 侧 = "停止覆盖" ⇒ 响应里**没有** `fetchIntervalMinutes` 键，下次到期回到站点声明的一小时 | [FeedsView.vue:118-124](../web/src/views/FeedsView.vue#L118) · [stores/feeds.ts:61-64](../web/src/stores/feeds.ts#L61) `[C]smoke.sh:420-427` `[B]` |
-| TC-SUB-57 | P0 | 间隔越界 | 手工 `PATCH {intervalMinutes:-1}` / `43201` | 400 `urn:rsshub:bad_interval`；`43200`（30 天）本身合法可写。前端 `min` 只是提示，不是护栏 | [SubscriptionService.java:139-142](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L139) · [FeedsView.vue:298](../web/src/views/FeedsView.vue#L298) `[自]` 同上 `[C]smoke.sh:404-409` |
-| TC-SUB-58 | P1 | 间隔输入的占位 | 观察空数字框 | 提示文案是"跟随站点（默认 **60** 分钟）"，`min` 是 **5**——两个数都来自 `GET /api/feeds/policy`，不是前端抄的常量；`/policy` 失败时提示仍显示、按钮仍可用（`policy` 为 `undefined` 才回落到字面量） | [FeedsView.vue:299](../web/src/views/FeedsView.vue#L299) · [stores/feeds.ts:45-52](../web/src/stores/feeds.ts#L45) · [FeedController.java:51-53,60-63](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L60) `[自]InboxApiTest#theFetchPolicyReflectsTheConfiguredInterval` `[C]smoke.sh:377-378` |
-| TC-SUB-59 | P0 | 立即抓取的往返真相 | 点 [立即抓取] | 按钮变"抓取中…"且**只有这一行**变（`fetching` 存 id 不存布尔）；202 之后页面**轮询这一行**直到 `lastFetchedAt` 变了才报"已抓取，新增 N 条，下次按策略更新"——202 只代表队列答应了，不代表抓完了 | [FeedsView.vue:21-22,128-151](../web/src/views/FeedsView.vue#L128) · [stores/feeds.ts:71-94](../web/src/stores/feeds.ts#L77) `[自]FetchNowServiceTest#refreshingPushesTheWorkForwardAndRunsIt` `[C]smoke.sh:416-418` `[B]` |
-| TC-SUB-60 | P1 | 立即抓取超时 | 15 秒内没落回（同一主机被别的订阅占住） | 失败态文案"已排队，但这一轮还没抓完…稍后刷新查看"，**不谎报成功**；表格不被整表 `load()` 闪一下（所以轮询单行而不是重载列表） | [FeedsView.vue:137-141](../web/src/views/FeedsView.vue#L137) · [stores/feeds.ts:71-76](../web/src/stores/feeds.ts#L71) `[B]` |
+| TC-SUB-48 | P0 | [解析] 前的清空 | 解析 A → 把地址改成 B | A 的候选列表、选中项、上一条提示**全部消失**（`resetDiscovery` 四件套：discovery/chosen/message/failed），添加按钮不能拿着 A 的地址提交 | [FeedsView.vue:52-61](../web/src/views/FeedsView.vue#L52) · 改地址即触发 [:64](../web/src/views/FeedsView.vue#L64) 的 `watch` `[B]` |
+| TC-SUB-49 | P0 | 解析失败的清空 | 解析一个非 feed 地址 | 失败态同样清空候选与选中项，`chosen` 归空 ⇒ 不会出现"上一次解析还能添加" | [FeedsView.vue:77-81](../web/src/views/FeedsView.vue#L77) `[B]` |
+| TC-SUB-50 | P1 | 候选行的 [直接添加] | 不选 radio，直接点某条候选后面的按钮 | 订阅的是**这一条**候选，与 `chosen` 无关（`add(candidate.url)` 显式传参，`add()` 的第一优先参数就是它） | [FeedsView.vue:342](../web/src/views/FeedsView.vue#L342) · [:86-88](../web/src/views/FeedsView.vue#L86) `[B]` |
+| TC-SUB-51 | P0 | 订阅标题就地编辑 | 改标题后失焦 | `PATCH /api/feeds/{id}` 带 `{title}` → 返回整行回写；消息"标题已保存"；**收件箱与健康度页同源同名**（读同一列，不是三处各存一份） | [FeedsView.vue:118-124](../web/src/views/FeedsView.vue#L118) · [SubscriptionService.java:275-291](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L275) `[自]InboxApiTest#aFeedCanBeRenamedButNeverRepointed` `[C]smoke.sh:380-387` |
+| TC-SUB-52 | P0 | 标题交还给站点 | 清空标题后失焦 | 空串写 `NULL` 覆盖列，显示回落到站点自己的 `<title>`；消息仍是"标题已保存" | [FeedsView.vue:465-466](../web/src/views/FeedsView.vue#L465) · [api/feeds.ts:58-68](../web/src/api/feeds.ts#L58) `[C]smoke.sh:429-432`（改回后 `feedTitle` 变回 "Smoke source"） |
+| TC-SUB-53 | P0 | 地址不可更改 | 悬停行内的地址链接 | `title` 提示明写"换地址请删除后重新订阅，条目与队列都挂在它上面"；页面上没有让地址变成输入框的入口 | [FeedsView.vue:467-470](../web/src/views/FeedsView.vue#L467) `[B]` |
+| TC-SUB-54 | P0 | 绕过页面改地址 | `PATCH {"canonicalUrl":"…"}` 或 `{"requestedUrl":"…}` | **400 `urn:rsshub:unknown_field`**，且消息里点名被拒的键；地址一格未动。**故意不"忽略未知键"**：200 + 什么都没改，操作员会以为搬家成功了 | [SubscriptionService.java:52-53](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L52) · [:269-273](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L269) `[自]` 同上 `[C]smoke.sh:390-398` |
+| TC-SUB-55 | P0 | 抓取间隔就地编辑 | 填 15 后失焦 | `PATCH {intervalMinutes:15}` → `fetchIntervalMinutes:15`；**下一轮抓取后仍是 15**（覆盖列与站点 `<ttl>` 分列存储，抓取只写后者） | [FeedsView.vue:126-134](../web/src/views/FeedsView.vue#L126) · [smoke.sh:411-418](../backend/smoke.sh#L411) `[自]InboxApiTest#intervalAndGroupEditsAreBoundedAndExplicit` `[C]` |
+| TC-SUB-56 | P0 | 间隔交还给站点 | 清空数字框后失焦 | 空框在页面侧换算成 `0`，`0` 在 API 侧 = "停止覆盖" ⇒ 响应里**没有** `fetchIntervalMinutes` 键，下次到期回到站点声明的一小时 | [FeedsView.vue:126-132](../web/src/views/FeedsView.vue#L126) · [stores/feeds.ts:61-64](../web/src/stores/feeds.ts#L61) `[C]smoke.sh:420-427` `[B]` |
+| TC-SUB-57 | P0 | 间隔越界 | 手工 `PATCH {intervalMinutes:-1}` / `43201` | 400 `urn:rsshub:bad_interval`；`43200`（30 天）本身合法可写。前端 `min` 只是提示，不是护栏 | [SubscriptionService.java:283-286](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L283) · [FeedsView.vue:491](../web/src/views/FeedsView.vue#L491) `[自]` 同上 `[C]smoke.sh:404-409` |
+| TC-SUB-58 | P1 | 间隔输入的占位 | 观察空数字框 | 提示文案是"跟随站点（默认 **60** 分钟）"，`min` 是 **5**——两个数都来自 `GET /api/feeds/policy`，不是前端抄的常量；`/policy` 失败时提示仍显示、按钮仍可用（`policy` 为 `undefined` 才回落到字面量） | [FeedsView.vue:492](../web/src/views/FeedsView.vue#L492) · [stores/feeds.ts:45-52](../web/src/stores/feeds.ts#L45) · [FeedController.java:51-53,60-63](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L60) `[自]InboxApiTest#theFetchPolicyReflectsTheConfiguredInterval` `[C]smoke.sh:377-378` |
+| TC-SUB-59 | P0 | 立即抓取的往返真相 | 点 [立即抓取] | 按钮变"抓取中…"且**只有这一行**变（`fetching` 存 id 不存布尔）；202 之后页面**轮询这一行**直到 `lastFetchedAt` 变了才报"已抓取，新增 N 条，下次按策略更新"——202 只代表队列答应了，不代表抓完了 | [FeedsView.vue:29-30,136-159](../web/src/views/FeedsView.vue#L136) · [stores/feeds.ts:71-94](../web/src/stores/feeds.ts#L77) `[自]FetchNowServiceTest#refreshingPushesTheWorkForwardAndRunsIt` `[C]smoke.sh:416-418` `[B]` |
+| TC-SUB-60 | P1 | 立即抓取超时 | 15 秒内没落回（同一主机被别的订阅占住） | 失败态文案"已排队，但这一轮还没抓完…稍后刷新查看"，**不谎报成功**；表格不被整表 `load()` 闪一下（所以轮询单行而不是重载列表） | [FeedsView.vue:145-149](../web/src/views/FeedsView.vue#L145) · [stores/feeds.ts:71-76](../web/src/stores/feeds.ts#L71) `[B]` |
 
 ### 24.2 `DSH` 新增：五个区块与"数字必须能对上账"（接 20.1）
 
@@ -1159,7 +1159,7 @@ BLK-01 键盘流/桌面通知/未读轮询、BLK-02 `/feed/changelog.xml`、BLK-
 | TC-UIF-03 | P0 | 顶栏 | 登录后观察 | `.navbar.navbar-expand-xxl.app-navbar.sticky-top`；`--mica` 半透（F14 起是 `rgba(233,241,249,.72)`，与淡蓝画布同色相，模糊才读得出是"画布透上来"而不是灰） + `backdrop-filter: blur(16px) saturate(1.6)`；当前页签是白底 + 卡片阴影 + **底部 16×3px 强调色下划线**（`.router-link-active::after`）；窄屏由 `navbar-expand-xxl` 折成汉堡按钮，不再是横向滚动条 | [App.vue:46-62](../web/src/App.vue#L46) · 折叠按钮 [App.vue:52-55](../web/src/App.vue#L52) · [theme.css:242-248](../web/src/styles/theme.css#L242) · 页签态 [:249-280](../web/src/styles/theme.css#L252) · `--mica` [:22](../web/src/styles/theme.css#L22) `[B]`（模糊观感未经人眼确认） |
 | TC-UIF-04 | P0 | 主按钮 | 观察登录页与两处"保存" | 强调色统一为 `--accent`（蓝），**不再有一处绿一处蓝**：底色/描边/hover/active/disabled 全写成 Bootstrap 自己的 `--bs-btn-*`，所以 F12 那个"通用 `button:hover:not(:disabled)` 权重 (0,2,1) 压过主按钮基态"的问题在结构上不存在了 | [theme.css:102-116](../web/src/styles/theme.css#L102) · 调用点 [LoginView.vue:75](../web/src/views/LoginView.vue#L75) · [RuleEditor.vue:310](../web/src/components/RuleEditor.vue#L310) · [PostsView.vue:324](../web/src/views/PostsView.vue#L324) `[B]` |
 | TC-UIF-05 | P0 | 输入框 | 聚焦/悬停/对比底色 | `.form-control` / `.form-select` 由 Bootstrap 给结构，**底色来自 `--bs-body-bg`**——F14 把这条写死成断言：`--bs-body-bg` 必须是"表面"（白），页面底色由 `body` 自己画 `--canvas`，否则卡片、输入框与页面三者同色（F13 就是这个状态，实测 `rgb(233,241,249)` 三处相同）；focus 圈换成强调色描边 + 25% 光晕；控件密度整体靠 `html { font-size: 14px }`（Bootstrap 全 rem，所以改根字号就等于改所有控件尺寸） | [theme.css:183-187](../web/src/styles/theme.css#L183) · `--bs-body-bg` [:51](../web/src/styles/theme.css#L51) · `body` [:80](../web/src/styles/theme.css#L80) · 根字号 [:74-76](../web/src/styles/theme.css#L74) · 登录页两个字段 [LoginView.vue:53-59](../web/src/views/LoginView.vue#L53) `[机]探针`（见 24.7）+ `[B]` |
-| TC-UIF-06 | P0 | 每个可点控件有 hover | 逐页悬停：解析/添加/立即抓取/全部已读/删除/候选行的直接添加/收件箱筛选 chip/加载更多/大屏立即刷新/阅读面板动作/聚合页出口 pill 与操作链接 | 悬停底色由 Bootstrap 提供（`.btn:hover`、`.list-group-item-action:hover`、`.nav-link:hover`），自己只剩两处：**顶栏页签**（120ms `--ease`）与**收件箱条目行**；**文本型链接**（"显示密钥"这类）是 `.btn-link`，悬停出下划线而不是加底色 | [theme.css:261-264](../web/src/styles/theme.css#L261) · [InboxView.vue:208-210](../web/src/views/InboxView.vue#L208) · 控件面 [FeedsView.vue:211](../web/src/views/FeedsView.vue#L211) · [DashboardView.vue:149](../web/src/views/DashboardView.vue#L149) · [ReaderPane.vue:66-83](../web/src/components/ReaderPane.vue#L66) · [RepackView.vue:254-260](../web/src/views/RepackView.vue#L254) `[B]` |
+| TC-UIF-06 | P0 | 每个可点控件有 hover | 逐页悬停：解析/添加/立即抓取/全部已读/删除/候选行的直接添加/收件箱筛选 chip/加载更多/大屏立即刷新/阅读面板动作/聚合页出口 pill 与操作链接 | 悬停底色由 Bootstrap 提供（`.btn:hover`、`.list-group-item-action:hover`、`.nav-link:hover`），自己只剩两处：**顶栏页签**（120ms `--ease`）与**收件箱条目行**；**文本型链接**（"显示密钥"这类）是 `.btn-link`，悬停出下划线而不是加底色 | [theme.css:261-264](../web/src/styles/theme.css#L261) · [InboxView.vue:208-210](../web/src/views/InboxView.vue#L208) · 控件面 [FeedsView.vue:319](../web/src/views/FeedsView.vue#L319) · [DashboardView.vue:149](../web/src/views/DashboardView.vue#L149) · [ReaderPane.vue:66-83](../web/src/components/ReaderPane.vue#L66) · [RepackView.vue:254-260](../web/src/views/RepackView.vue#L254) `[B]` |
 | TC-UIF-07 | P0 | 键盘焦点可见 | Tab 走一遍登录页与订阅页 | 焦点环是 2px 强调色 outline + 1px 外偏移，`:where(...)` 写法所以不抢组件自己的选择器权重；表单字段另外保留 Bootstrap 的 focus 光晕 | [theme.css:191-194](../web/src/styles/theme.css#L191) `[B]` |
 | TC-UIF-08 | P0 | 状态标签按结果上色 | 大屏投递轨观察 `sent/failed/pending/suppressed/skipped_quiet` 五种 | 轨上的 pill 由 `ALERT_TONES` 映射到 Bootstrap 的 `text-bg-*`，未知值落 `secondary` 而不是继承一个会读成"成功"的颜色；**卡片上的 `paused`/`muted` 保持中性**（`text-bg-secondary` + 整卡 `opacity-75`）——暂停是操作员的选择，不是故障。**F14 起 `secondary` 不是 Bootstrap 的灰**：`.text-bg-secondary` 读 `--bs-secondary-rgb`，本项目把它指成 slate `rgb(90,113,136)`（白字 5.06:1），所以"安静"这一档在淡蓝族里仍是安静的那一档 | [DashboardView.vue:116-122](../web/src/views/DashboardView.vue#L116) · `alertTone` [:124-126](../web/src/views/DashboardView.vue#L124) · 轨上 pill [:285](../web/src/views/DashboardView.vue#L285) · 卡片侧 [:232](../web/src/views/DashboardView.vue#L232)、[:238](../web/src/views/DashboardView.vue#L238) · `--bs-secondary-rgb` [theme.css:360](../web/src/styles/theme.css#L360) `[B]` |
 | TC-UIF-09 | P1 | 卡片/面板阴影 | 对照登录卡、大屏面板、订阅页候选框 | 统一 `--shadow-card`（8px 圆角 + 1px 3px，**F14 起是 `rgb(15 40 70 / 12%)` 而不是纯黑**，蓝画布上的投影才不脏）走 `.card`；`--shadow-flyout` 经 `--bs-box-shadow` 给 Bootstrap 自己的弹层类；**`.dropdown-menu`/`.flyout` 这两条规则当前没有任何位点使用**（15 个 `.vue` 里 `grep -rn dropdown` 与 `grep -rn flyout` 各自零命中，F14 实测）——留着不亏，但别把它当成"本项目有下拉"的证据；`theme-color` 与画布同色（**F14 实测时它还是 F13 的 `#f3f3f3`，画布转蓝后成了唯一没跟上的色位，已改 `#e9f1f9`**） | [theme.css:203-209](../web/src/styles/theme.css#L203) · 弹层 [:228-233](../web/src/styles/theme.css#L231) · 阴影令牌 [:37-38](../web/src/styles/theme.css#L37) · [index.html:6](../web/index.html#L6) `[B]` |
@@ -1200,11 +1200,11 @@ BLK-01 键盘流/桌面通知/未读轮询、BLK-02 `/feed/changelog.xml`、BLK-
 
 | 原说法（文档里曾经写的） | 正确说法 | 出处（=本轮读源码确认的位置） |
 |---|---|---|
-| 重复订阅 409 在 `SubscriptionService.java:83-85` / `:84` | `:100-101`（`already_subscribed`） | [SubscriptionService.java:100-101](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L100) |
-| 订阅前 SSRF 校验在 `:76` | `:92-94`（`guard.validate(requested)` 在发现之前） | [:93](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L93) |
-| 导入拒绝不可信地址在 `:153-160` | `:241-246`（`importOpml` 里逐条 `guard.validate`，失败只 `skipped++`） | [:242](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L242) |
-| 非 http(s) 拒绝在 `:196-199` | `:281-284`（`scheme_not_allowed`） | [:281-284](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L281) |
-| `normalise` 契约在 `:186-190` | `:271-274`（javadoc）+ 方法体 `:276-290` | [:276](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L276) |
+| 重复订阅 409 在 `SubscriptionService.java:118-120` / `:84` | `:100-101`（`already_subscribed`） | [SubscriptionService.java:135-136](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L135) |
+| 订阅前 SSRF 校验在 `:76` | `:92-94`（`guard.validate(requested)` 在发现之前） | [:128](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L128) |
+| 导入拒绝不可信地址在 `:153-160` | `:241-246`（`importOpml` 里逐条 `guard.validate`，失败只 `skipped++`） | [:391](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L391) |
+| 非 http(s) 拒绝在 `:196-199` | `:281-284`（`scheme_not_allowed`） | [:430-433](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L430) |
+| `normalise` 契约在 `:186-190` | `:271-274`（javadoc）+ 方法体 `:276-290` | [:425](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L425) |
 | 收件箱 `q` 的 LIKE 在 `EntryFinder.java:268-276` / `:268-278` | `:324-335` | [EntryFinder.java:324-335](../backend/src/main/java/com/rsshub/feedstore/EntryFinder.java#L324) |
 | `escapeLike` 在 `:318`、`ESCAPE '\'` 在 `:274` | `:374-376`、`:330-332` | [:374-376](../backend/src/main/java/com/rsshub/feedstore/EntryFinder.java#L374) |
 | "只看命中"的 EXISTS 在 `:280-286` | `:336-342` | [:336-342](../backend/src/main/java/com/rsshub/feedstore/EntryFinder.java#L336)（也修了 [02 §3 `feedstore` 行](./design/02-architecture.md)） |
@@ -1425,6 +1425,131 @@ BLK-01 键盘流/桌面通知/未读轮询、BLK-02 `/feed/changelog.xml`、BLK-
 
 ---
 
+## 25. 第十二轮新增用例与执行结果（F16：批量订阅，2026-11-03）
+
+用户口径：**"增加批量增加订阅的功能，自动以 `,` `;` `:` 、 回车等自动解析成多条"**。落点是订阅管理页上方新增的一张折叠卡片：贴一段文本 → 本机把它读成"一条地址 + 地址前面的名字" → 先看逐行清单 → 再一次性写入。本轮四件东西：一个纯文本拆分器、两个端点、一个面板、一批断言。
+
+| 层 | 位置 | 这一层只负责什么 |
+|---|---|---|
+| 拆分器 | `PastedSubscriptions.split(String)`（[PastedSubscriptions.java:37-52](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L37)） | 文本的读法：不补协议、不判 SSRF、不碰库；输出 `Candidate(lineNo, label, address)`（[:29](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L29)） |
+| 预览端点 | `POST /api/feeds/batch/plan`（[FeedController.java:148-151](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L148)）→ `planBatch`（[SubscriptionService.java:154-157](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L154)） | 逐行判决 `ready`/`duplicate`/`refused`/`invalid` 与一个 `ready` 计数，**一行都不写** |
+| 写入端点 | `POST /api/feeds/batch`（[FeedController.java:158-161](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L158)）→ `addBatch`（[SubscriptionService.java:171-199](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L171)） | 只写 `ready` 行，返回 `added` 与逐行的最终判决（写成功的行把 `ready` 覆盖成 `added`） |
+| 面板 | [FeedsView.vue:354-441](../web/src/views/FeedsView.vue#L354) | 折叠卡片（本项目不引 Bootstrap 的 JavaScript，所以是 `v-if` + `:aria-expanded`，不是 collapse 组件），提示框与单条添加各用一套 |
+| 客户端 | 三个类型 [api/feeds.ts:84-106](../web/src/api/feeds.ts#L84) · 两个方法 [:124-126](../web/src/api/feeds.ts#L124) | 能发的键只有 `text` 与 `group`：客户端没有"把某条地址改成另一条"的通道 |
+
+三条口径先钉住，25.1–25.3 的用例基本都在验它们：
+
+1. **预览是预览，不是指令。** 写入端点重新解析同一段文本——`addBatch` 的第一句就是 `classify(text)`（[SubscriptionService.java:172-173](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L172)），与 `planBatch` 用的 [:155](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L155) 是同一个私有方法 [:206-253](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L206)——所以拿着 plan 的返回体也改不出一个 guard 没检查过的地址；两次调用之间被别人订阅走的地址，这一轮表现为 `duplicate/already_subscribed` 而不是第二行（TC-SUB-64）。
+2. **批量不做逐行"解析"。** 与 OPML 导入同一口径，理由写在 [SubscriptionService.java:166-169](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L166)：五十个地址各发一次发现请求，一个不可达的主机就能挂住整批。地址原样入库（`requested_url = canonical_url`，[:183](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L183)）；贴进来的是网页 ⇒ 第一抓在健康度列写 `not_a_feed`，补救入口是上面那个单地址"解析"按钮，面板的说明文字把这条限制直接告诉操作员（[FeedsView.vue:374-378](../web/src/views/FeedsView.vue#L374)）。
+3. **不静默丢行。** 读不懂的一行仍占一行（[PastedSubscriptions.java:93-95](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L93)：行尾没人认领的名字放回候选），否则"贴二十行成了十八行"与"本来只有十八行"在屏幕上长得一样（TC-SBP-09 / TC-SUB-69）。
+
+### 25.1 `SBP` 拆分器：粘贴文本的读法（12 条，全部 `[自]`，不碰网络也不碰库）
+
+| 编号 | P | 输入形状 | 期望读法 | 依据 / 现状 |
+|---|---|---|---|---|
+| TC-SBP-01 | P0 | 每行一个地址，中间夹一行空行 | 一条候选一条地址；`lineNo` 是**原文行号**（1、3、4），空行不产候选但行号不塌陷，表里点得出是哪一行出问题 | [PastedSubscriptions.java:42-50](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L42) 按 `\R` 分行 · [PastedSubscriptionsTest.java:17](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L17) `oneAddressPerLineKeepsItsLineNumber` `[自]` |
+| TC-SBP-02 | P0 | `, ，; ；、` 与空格/回车混排，含 `a,,b` 这种连续分隔符 | 全部拆开，空 token 不出现——一条 `TOKENS = [^\s,，;；、]+` 吃掉所有宽度，不需要逐字符判断中英文 | [:32](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L32) · [PastedSubscriptionsTest.java:32](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L32) `[自]` |
+| TC-SBP-03 | P0 | `阮一峰:https://…/atom.xml`（半角冒号） | **一条**候选：`label=阮一峰`、`address=https://…`。冒号左侧不像地址而右侧像 ⇒ 这道冒号是"命名"，不是分隔 | [:58-72](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L58) `emit` · [PastedSubscriptionsTest.java:43](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L43) `[自]` |
+| TC-SBP-04 | P0 | `王垚： http://…`（全角冒号 + 其后空格） | 与 TC-SBP-03 同一读法：`firstSplitColon` 同时认 `:` 与 `：`，中文输入法下的冒号不会退化成"两条订阅" | [:103-116](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L103) · [PastedSubscriptionsTest.java:52](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L52) `[自]` |
+| TC-SBP-05 | P1 | `笔记 https://…`（名字与地址之间只有空格） | 仍是"名字 + 地址"一条，**不会**多出一条订阅——聊天记录与两列表格贴过来就是这个形状 | [:79-96](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L79) `nameTheAddresses` · [PastedSubscriptionsTest.java:61](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L61) `[自]` |
+| TC-SBP-06 | P0 | `https://p.example:8443/feed?a=1&b=2`（CRLF 换行） | 协议冒号与端口冒号都不许拆：`:8443/` 后面是"数字 + `/`"，属于地址的一部分，整条原样保留；`\R` 认 CRLF | [:110](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L110) `after.matches("\\d+([/?#].*)?")` · [PastedSubscriptionsTest.java:72](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L72) `[自]` |
+| TC-SBP-07 | P1 | `a.example/rss:b.example/rss`（冒号两侧都像地址） | 两条地址，左侧**不是**名字——否则第二个地址会被当成第一个的标题而丢掉 | [:69-70](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L69) · [PastedSubscriptionsTest.java:82](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L82) `[自]` |
+| TC-SBP-08 | P1 | `旧竹新苑 博客 https://…`（一行两个非地址 token） | 合成一个名字"旧竹新苑 博客" + 一条地址：名字并成一支，第二条订阅不会带着半个名字入库 | [:83](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L83) · [PastedSubscriptionsTest.java:90](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L90) `[自]` |
+| TC-SBP-09 | P0 | `见备注`（整行读不懂） | 仍产出一条候选 `address=见备注`——判 `invalid` 是 `classify` 的事，拆分器无权丢行 | [:93-95](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L93) · [PastedSubscriptionsTest.java:98](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L98) `[自]` |
+| TC-SBP-10 | P1 | `https://x.example/feed 备注`（名字写在地址**后面**） | 两条候选：地址一条、"备注"一条。并名字只在"非地址且走在地址前面"时发生；尾部的孤立 token 放回候选（同 TC-SBP-09 的机制） | [:82-84](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L82) · [PastedSubscriptionsTest.java:108](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L108) `[自]` |
+| TC-SBP-11 | P1 | `example.com`（裸域名，没有路径） | 仍作为**地址**交下去（`label` 为空）：`looksLikeAddress` 认的是"点 + 斜杠"，缺斜杠时它先被当名字，但行尾没人认领就原样回到候选——补不补协议由 `normalise` 判 | [:123-128](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L123) + [:93-95](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L93) · [PastedSubscriptionsTest.java:116](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L116) `[自]` |
+| TC-SBP-12 | P2 | 只有空白/制表/换行，以及 `null` | 返回**空列表**而不是抛异常："这堆文本里没有地址"是服务的 400 `nothing_to_add`（TC-SUB-71），不是拆分器的崩溃现场 | [:39-41](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L39) · [PastedSubscriptionsTest.java:126](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L126) `[自]` |
+
+### 25.2 `SUB` 新增：批量两个端点（12 条，`[自]` + `[C]`）
+
+| 编号 | P | 端点 / 场景 | 操作 | 预期结果 | 依据 / 现状 |
+|---|---|---|---|---|---|
+| TC-SUB-61 | P0 | `POST /api/feeds/batch/plan` | 贴"两行 + 其中一行两条（逗号分隔）" | `items` 三行、`ready:3`、`lineNo` 按原文（1,2,2）；**`feed` 表仍然零行**——预览不写 | [SubscriptionService.java:154-157](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L154) · [SubscriptionBatchApiTest.java:87](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L87) `planSplitsEveryLineAndWritesNothing` `[自]` `[C]smoke.sh:523-529` |
+| TC-SUB-62 | P0 | 名字落库 | 贴 `一号: <地址>` 与一条无名地址，再写入 | 有名字的写进 `custom_title`；无名字的那条 `custom_title` **为 NULL**（显示回落到站点 `<title>`，与 TC-SUB-52 同一条回落链）；两条都落进同一个 `group_name` | [SubscriptionService.java:183-186](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L183) · [SubscriptionBatchApiTest.java:100](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L100) `[自]` `[C]smoke.sh:535-536` |
+| TC-SUB-63 | P0 | 一次粘贴里的重复 | 同一地址贴两遍 | 第一条 `ready`、第二条 `duplicate` + `reason=already_in_paste`、`ready=1` ⇒ [添加 1 条] 只写一条 | [:243-245](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L243) · [SubscriptionBatchApiTest.java:115](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L115) `[自]` |
+| TC-SUB-64 | P0 | 已订阅的地址**不是**冲突 | 先批量写 A，再批量贴 `A\nB` | **200 而不是 409**（单条添加走的是 `already_subscribed` 冲突，见 TC-SUB-09）：`added:1`，A 行 `duplicate/already_subscribed`，B 行 `added`，表里两行 | [:246-249](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L246) · [SubscriptionBatchApiTest.java:127](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L127) `[自]` `[C]smoke.sh:548-550` |
+| TC-SUB-65 | P0 | 每条新订阅各自排队 | 批量写三条 | `scheduled_task` 三行 `kind='fetch'`，`dedupe_key=feed:{id}` 各不同；`fire_at` 依次相隔 **10 秒**，第一条不推迟（与 OPML 导入同法：两百条不能同时开两百个 socket） | [:187-189](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L187) · [SubscriptionBatchApiTest.java:142](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L142) `[自]` `[C]smoke.sh:537` |
+| TC-SUB-66 | P0 | 批量不触网 | 写一个没人监听的地址 | 照样 `added`，`requested_url = canonical_url =` 原样地址；抓取是队列 worker 的事，请求本身不等它（面板因此不会被一个不可达主机卡住） | [:166-169](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L166) · [SubscriptionBatchApiTest.java:156](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L156) `[自]` |
+| TC-SUB-67 | P0 | 私网地址逐行拒 | 贴 `http://192.168.7.7/inside.rss` + 一条正常地址 | 该行 `refused` 且 `reason` 以 `private_target` 开头（同一把 [SsrfGuard](../backend/src/main/java/com/rsshub/security/SsrfGuard.java#L1)，与单条添加不是两套规则）；写入端只落正常那条 | [:232-236](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L232) · [SubscriptionBatchApiTest.java:166](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L166) `[自]` `[C]smoke.sh:526` |
+| TC-SUB-68 | P0 | 非 http(s) 算"无效"不算"被拒" | 贴 `ftp://files.example/rss` | `status=invalid` + `reason=scheme_not_allowed`——协议不过与 SSRF 拦截在 UI 上是两个 pill，混成一个就没人知道该改哪儿 | [:226-231](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L226) · [SubscriptionBatchApiTest.java:182](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L182) `[自]` `[C]smoke.sh:527` |
+| TC-SUB-69 | P0 | 读不懂的行仍在表里 | 贴 `见备注` + 一条正常地址 | 两行都返回，`见备注` 那行 `status != ready` 且带着原始文本——操作员看得见"这条我没订"，不用猜少了几条 | [:206-253](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L206) · [SubscriptionBatchApiTest.java:193](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L193) `[自]` `[C]smoke.sh:528` |
+| TC-SUB-70 | P0 | 条数上限 | 贴 201 条 | **400** `urn:rsshub:too_many_lines`，且**半批都不写**（`feed`、`scheduled_task` 均 0 行）：计数在读完文本之后、写之前，`@Transactional` 之外也没有"先写一半" | [:211-214](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L211)（`MAX_BATCH_ITEMS` [:60](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L60)） · [SubscriptionBatchApiTest.java:204](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L204) `[自]` `[C]smoke.sh:554-559` |
+| TC-SUB-71 | P1 | 空粘贴与纯分隔符粘贴 | `{"text":"   "}`、`{"text":""}`、`{"text":",,;\n、"}` | 前两个 400 来自 `@NotBlank`（[FeedController.java:141-143](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L141)），第三个越过契约但读不出地址 ⇒ 400 `urn:rsshub:nothing_to_add`（[:209](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L209)）。**不给"新增了 0 条"的成功响应** | [SubscriptionBatchApiTest.java:219](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L219) `[自]` |
+| TC-SUB-72 | P0 | 未登录 | 匿名 `POST` 两个端点 | 两个都 4xx 且**库里零行**（本项目的匿名写先撞 CsrfFilter ⇒ 403，匿名读 401，口径见第 10 节与 TC-SUB-45；`[C]` 侧同样是 4 字头） | [SubscriptionBatchApiTest.java:235](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L235) `[自]` `[C]smoke.sh:560-562` |
+
+### 25.3 `SUB` 新增：面板上的按钮与表（10 条，全部 `[B]`）
+
+控件清点（F16 之后，接第 5 节开头那句）：批量卡片 = **1 个折叠按钮（展开/收起）+ 1 个多行地址输入 + 1 个分组输入 + 3 个按钮（解析 / 添加 N 条 / 清空）+ 1 个逐行结果表（5 列）+ 1 个独立提示框**。
+
+| 编号 | P | 控件 | 操作 | 预期结果 | 依据 / 现状 |
+|---|---|---|---|---|---|
+| TC-SUB-73 | P0 | [展开] / [收起] | 点 | `v-if="batchOpen"` 收起整张卡（不引 Bootstrap 的 JavaScript，所以没有 collapse 动画）；收起后若文本仍在，卡片头显示"已粘贴 N 行" | [FeedsView.vue:360-366](../web/src/views/FeedsView.vue#L360) `[B]` |
+| TC-SUB-74 | P0 | 批量地址输入 | 贴一段文本 | `id="batch-text"` 用等宽字体（对齐靠它）；占位文案直接给两种写法（每行一个 / `名字: 地址`）；行数 `batchLines` 按 `/\r\n\|\r\|\n/` 数非空行 | [:372](../web/src/views/FeedsView.vue#L372) · [:199](../web/src/views/FeedsView.vue#L199) `[B]` |
+| TC-SUB-75 | P0 | [解析] | 点 | `POST /api/feeds/batch/plan` → 逐行表渲染；`batchBusy` 期间按钮禁用并转 spinner；文本为空时禁用；无一条可加时提示转失败色但**表仍然显示**（要说清为什么不行） | [:386-389](../web/src/views/FeedsView.vue#L386) · [:236-255](../web/src/views/FeedsView.vue#L236) `[B]` |
+| TC-SUB-76 | P0 | [添加 N 条] | 点 | 按钮文案里的 N **就是**后端给的 `ready` 计数（`batchReady`）；`ready===0` 时禁用 ⇒ 不存在"点下去写了 0 条还报成功" | [:391-393](../web/src/views/FeedsView.vue#L391) · [:233](../web/src/views/FeedsView.vue#L233) `[B]` |
+| TC-SUB-77 | P0 | 逐行结果表 | 看 | 五列：行 / 名称 / 地址 / 结果 / 说明；五个判决各有文案与语义色——可添加 `text-bg-primary`、已添加 `success`、重复 `secondary`、被拒绝 `warning`、读不懂 `danger`；`reason` 原样跟在后面供报障 | [:400-429](../web/src/views/FeedsView.vue#L400) · [:202-208](../web/src/views/FeedsView.vue#L202) `[B]` |
+| TC-SUB-78 | P1 | 补协议可视化 | 贴 `example.com/feed` | 原始文本下面另起一行 `→ https://example.com/feed`（只在 `url !== address` 时出现）：操作员知道自己订的是哪个地址，与 TC-SUB-38 的"搬过家"提示同一思路 | [:417-419](../web/src/views/FeedsView.vue#L417) `[B]` |
+| TC-SUB-79 | P1 | 改文本即清上次解析 | 解析后再编辑文本 | `watch(batchText, resetBatchPlan)` 清表、清消息、清失败态 ⇒ 不会出现"上一次解析的结果还能点添加"（与 TC-SUB-48 同一口径） | [:231](../web/src/views/FeedsView.vue#L231) · [:225-229](../web/src/views/FeedsView.vue#L225) `[B]` |
+| TC-SUB-80 | P1 | [清空] | 点 | 只清文本，不动分组、不动折叠态；文本为空时禁用 | [:395-396](../web/src/views/FeedsView.vue#L395) `[B]` |
+| TC-SUB-81 | P0 | 两套提示互不串台 | 单条添加失败后紧接着批量成功 | 批量用自己的 `batchMessage`/`batchFailed`，单条用自己的 `message`/`failed`：上方的"抓取失败"不会被批量的"已订阅 N 条"顶掉，反之亦然（两条写路径回答的是两个问题） | [:188-194](../web/src/views/FeedsView.vue#L188) · [:430-434](../web/src/views/FeedsView.vue#L430) vs [:346](../web/src/views/FeedsView.vue#L346) `[B]` |
+| TC-SUB-82 | P1 | 零写入时不吞文本 | 整批都是重复 → 点添加 | `added===0`：**保留文本**、把表刷成写入端的最终判决（`ready` 归 0）、提示转失败色"没有新订阅写入，N 条已存在或被拒绝"；`added>0` 才清空文本与表并 `load()` 重读列表 | [:266-276](../web/src/views/FeedsView.vue#L266) `[B]` |
+
+### 25.4 第十二轮执行实录与勘误（F16：批量订阅，2026-11-03）
+
+本轮的产物是功能，不是审计，所以勘误集中在**代码自己说的和做的不一致**、以及**新增代码把全仓行号推动**两类。
+
+**执行门禁（全部本机重跑，日志留档）**
+
+| 门禁 | 命令 | 结果 | 日志 |
+|---|---|---|---|
+| 后端全量 | `backend/mvnw -o -B -ntp verify` | **421 项 / 40 个类 / 0 失败 0 错误 / BUILD SUCCESS**（01:16 min）——比 F15 的 397 项多 24 项：`PastedSubscriptionsTest` 12 条 + `SubscriptionBatchApiTest` 12 条 | `.dev-logs/f16b-verify.log` |
+| 真 HTTP 冒烟 | `bash .dev-logs/smoke-run.sh f16b` | **222 条 `PASS` / 0 条 `FAIL` / 末行 `ALL PASS`**，比上一轮 205 项多 17 项（全部是 F16 段），落在文档最高被引行 509 之后，既有 205 项引用不受影响 | `.dev-logs/f16b-smoke.log` |
+| 引用完整性 | `node .dev-logs/f13-check2.js` | **1059 条** `文件#L行` 引用：**0 缺失、0 越界**，13 条 `NO-LABEL-HIT`（中文标签与英文代码行的语义差，逐条读过被指行，与 F13 基线同数）。数字含文档同步（02/03/04/README 补 F16 口径）新增的引用 | 本轮收尾 |
+| 引用语义 | `node .dev-logs/f15-routecheck.js` | **57 条**带路由的引用（比 F15 多 3 条：`/api/feeds/batch`、`/api/feeds/batch/plan` 与 04 里那条），**0 条漂移** | 本轮收尾 |
+| 前端 | `npm run build`（含 `vue-tsc`） | 94 模块、0 类型错误、CSS 322.72 kB（gzip 48.01）、JS 226.64 kB（gzip 75.44）、704 ms | `.dev-logs/f16-build.log` |
+
+**文档同步之后又整体重跑了一遍**（F16-d 收尾，`.dev-logs/f16d-verify.log` 与 `.dev-logs/f16d-smoke.log`）：后端 **421 项 / 0 失败 / BUILD SUCCESS（01:06）**，冒烟换全新一次性库 `./.dev-logs/smoke-f16d` + 运行时自造口令再打一遍，**222 条 `PASS` / 0 条 `FAIL` / 末行 `ALL PASS`**，前端 94 模块、CSS 322.72 kB（gzip 48.01）、JS 226.64 kB（gzip 75.44）逐字节同上。这一步不是为了抓代码回归——本轮在 `f16b` 之后只动过文档——而是把文档里每个数字钉在**改完文档之后仍然成立**的那次运行上；数字没变，所以 1507–1509 三行的实测值同时适用于 `f16b` 与 `f16d` 两次。
+
+一次性实例口径不变：全新库 `./.dev-logs/smoke-f16b`、口令 `openssl rand -hex 12` 运行时自造只经环境变量、`:19999` fixture 源由 `smoke-run.sh` 重启到 revision=1、`--rsshub.ssrf.allow-private-prefixes=127.` 只为放行它。开发库 `backend/data/rss-hub.mv.db` 全程未被读写。
+
+**代码与注释不一致（1 处，改了注释并补了钉子）**
+
+[PastedSubscriptions.java:118-121](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L118) 的 javadoc 原写"`either a dot **or** a path separator in it"，而 [:128](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L128) 的实现是 `indexOf('.') >= 0 && indexOf('/') >= 0`——**与**。这不是笔误级别的差别：按注释读，裸域名 `example.com` 该被当成地址；按实现读，它没有斜杠，会被 [:82-84](../backend/src/main/java/com/rsshub/adminapi/PastedSubscriptions.java#L82) 的"名字"规则吞成下一条地址的标签，粘贴 `example.com/feed` 这类**省略协议又恰好没有斜杠**的行会悄悄变成标签。两处都选了"实现为准、把行为钉住"：javadoc 改成"点**和**斜杠都要有"，并新增 [PastedSubscriptionsTest.java:116](../backend/src/test/java/com/rsshub/adminapi/PastedSubscriptionsTest.java#L116)（TC-SBP-11）断言裸域名**仍作为独立候选出现**、不当标签——它读不懂也没关系，但不能不出现（第 25 节第三条设计规则）。
+
+**用例编号撞号（1 处，改测试不改文档）**
+
+`SubscriptionBatchApiTest` 的 12 个 `@DisplayName` 最初按本地顺序写成 `TC-SUB-01…12`，而第 5 节早已把这些号发给单条订阅的用例——目录里同一编号会指向两套完全不同的东西。grep 确认 `TC-SUB-60` 是当时最大号、61 起空闲后，测试里的显示名整体改为 `TC-SUB-61…72`。教训与 F15 的 GAP 同类：**编号是先占先得的资源，落笔前查一次重复**（`grep -oE 'TC-[A-Z]+-[0-9]+' doc/test-plan.md | sort -u | tail`）。
+
+**声明了但没证据（1 处，补断言）**
+
+§25.2 一开始把 `nothing_to_add`（粘贴里只有分隔符、拆出零条）写成"服务会拒绝"，但没有任何测试真的发过这个请求——属于 F15 那轮定义的"标记声称有证据、仓库里找不到"。补进 [SubscriptionBatchApiTest.java:219](../backend/src/test/java/com/rsshub/adminapi/SubscriptionBatchApiTest.java#L219)（TC-SUB-71）：`,,;\n、` 过得了 `@NotBlank`（[:141](../backend/src/main/java/com/rsshub/adminapi/FeedController.java#L141)），但拆分器交出空列表，所以必须 400 且 `type` 是 `urn:rsshub:nothing_to_add`、库里零行——**空粘贴不能长成"订阅了 0 条 / 共 0 条"的成功**。
+
+**冒烟首轮的假阴性**
+
+F16 段第一版 `batch_write()` 只带了 cookie，没带 `X-XSRF-TOKEN` 头，于是"plan writes nothing"这类断言把 CSRF 的 403 当成了产品行为。附录 A 开头那条坑（匿名 CSRF 拒绝被 `ExceptionTranslationFilter` 表现成 401，见第 18 节）在这里换了个方向咬回来：**写端点的冒烟必须显式带双 token**，否则测到的是过滤器而不是功能。加上 `csrf()` 后 17 项全绿。
+
+**行号漂移：F16 把全仓引用推动了一次**
+
+本轮在 4 个文件里插了行（[FeedController.java](../backend/src/main/java/com/rsshub/adminapi/FeedController.java) +26、[feeds.ts](../web/src/api/feeds.ts) 两段、[FeedsView.vue](../web/src/views/FeedsView.vue) 批量区、[smoke.sh](../backend/smoke.sh) +53），文档里指向这些文件**插入点之后**的引用全部失配，跨 test-plan 与 02/03/04 四份文档共 210 处链接与标签。做法是拿 `git diff -U0 HEAD` 的 hunk 头算出每个文件的旧→新行偏移表，再一次性重写：[.dev-logs/f16-remap.js](../.dev-logs/f16-remap.js)（对 diff 结果做算术，不做文本匹配）。三个坑值得记，因为它们都会**安静地写错文档**：
+
+| 坑 | 症状 | 修法 |
+|---|---|---|
+| 先写过一版按文本匹配的工具 | 把 `<td>` 那行映射成 `L421`，正确是 `L489`——文本相同但位置不同 | 弃用文本匹配，只信 hunk 算术 |
+| 链接正则写成 `([\w.-]+)\?#L` | `\?` 是"必须有字面问号"，于是 `#Lnn` 锚点一个都没命中，首轮 122 处只改了中括号标签里的数字，锚点仍是旧的 | `git checkout -- doc` 回滚，改正则后重跑，共 210 处 |
+| 插入型 hunk 的 off-by-one（`-135,0 +136,26`） | 旧 135 行被算成 161，指向了新代码内部 | `h.oldLen === 0 ? line <= h.oldStart : line < h.oldStart` |
+
+外加一处同名歧义：`feeds.ts` 在 `api/` 与 `stores/` 各有一份，按 basename 匹配会把 `stores/feeds.ts:71-94` 改成 `api/feeds.ts` 的新行号。改成**按路径后缀唯一命中，命中不唯一就跳过并报告**，1 处歧义人工核对后保留。
+
+这批重写无法用同一个工具自证归零（`f16-remap.js` 是一次性地对着 `HEAD` 的 diff 算的，文档已经改到新行号，再跑一次会二次平移），所以归零的证据是**两个常驻门禁**：`f13-check2.js` 的 0 缺失 / 0 越界（位置对不对）加 `f15-routecheck.js` 的 0 漂移（那一行说的是不是文档声称的那条路由）。提交后工作树干净，`git diff -U0 HEAD` 为空，届时重跑 remap 的空跑结果自然是零改动。
+
+**本轮没有新增对外部规范的引用**（拆分与判决规则全部是本项目自己的口径），所以第 17 节勘误表不动。
+
+**文档面同步（本轮的 F16-d 步骤）**：[01](./design/01-requirements.md) 的 FR-2.1 实况与 §7 DoD 的 F10 行各补一段、文档状态升到 v6，**行数仍是 210 行**（该文件被 44 处 `#L` 引用，是契约）；[02](./design/02-architecture.md) 的 `admin-api` 行加两个批量端点与"拆分器是纯文本、批量不触网，所以边界规则 2 不破"，`feedfetch` 行的 `SubscriptionService` 行号随本轮位移重核；[03](./design/03-technical-design.md) 新增 **§4.5 粘贴清单的拆分**（分隔符表、冒号的两种身份、"读不懂的行仍出一条候选"、`normalise` 收口、上限与空粘贴的判决位置）、§10 加两行端点契约并把"拆分规则"指向 §4.5、§11 加"批量面板"一段（六个控件 + 五个绑在后端契约上的口径）、§13 的测试口径 397→421 / 38→40 类并记下"`*.txt` 之和是 376、差额 45 在三个 `@Nested` 类里"这条数数坑、§14 新增 **O26**（批量面板 `[B]` 面）与 **O27**（批量判重是字符串相等）；[04](./design/04-roadmap.md) 里程碑表加 F16 行、合计 41.9→42.1 人日、新增 F16 小节（五个决定与各自代价）并把尾部总口径改到 421 / 222 / 461；[README](../../README.md) 的能力表、`mvnw`/`smoke-run.sh` 注释、用例数与门禁实测值同步。
+
+**未在浏览器复核**：TC-SUB-73…82 十条全部是 `[B]`，本轮只由 `vue-tsc` 的类型检查与上面的构建产物证明它们能编译、能打包，**没有肉眼在浏览器里点过**折叠按钮、[解析]、[添加 N 条]、[清空] 和逐行结果表的实际渲染。这一类与既有的 `[B]` 用例同样待人工验收。
+
+---
+
 ## 附录 A：`[C]` curl 冒烟序列（口令只从环境变量进）
 
 > v2 修订：登录必须先有一次 GET 拿到 `XSRF-TOKEN`，再把 token 放进 `X-XSRF-TOKEN` 头。原脚本直接 POST 登录，
@@ -1579,7 +1704,7 @@ curl -s -o /dev/null -w 'url-edit=%{http_code}\n' -b $J -c $J -H "X-XSRF-TOKEN: 
   -H 'Content-Type: application/json' -X PATCH $BASE/api/feeds/1 -d '{"canonicalUrl":"https://other.example/feed.xml"}'
 curl -s -b $J -c $J -H "X-XSRF-TOKEN: $TOK" -H 'Content-Type: application/json' \
   -X PATCH $BASE/api/feeds/1 -d '{"canonicalUrl":"https://other.example/feed.xml"}' | grep -o '"type":"[^"]*"'
-# 间隔的四态：负数与超过 30 天被拒，43200 是天花板本身，15 写进操作者自己的列（[SubscriptionService.java:45,139-142](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L139)）
+# 间隔的四态：负数与超过 30 天被拒，43200 是天花板本身，15 写进操作者自己的列（[SubscriptionService.java:47,283-286](../backend/src/main/java/com/rsshub/adminapi/SubscriptionService.java#L283)）
 curl -s -b $J -c $J -H "X-XSRF-TOKEN: $TOK" -H 'Content-Type: application/json' \
   -X PATCH $BASE/api/feeds/1 -d '{"intervalMinutes":-1}' | grep -o '"type":"[^"]*"'      # urn:rsshub:bad_interval
 curl -s -b $J -c $J -H "X-XSRF-TOKEN: $TOK" -H 'Content-Type: application/json' \
@@ -1637,6 +1762,28 @@ curl -s -b $J $BASE/api/entries/counters
 curl -s -b $J "$BASE/api/entries?state=all" | sed -n 's/.*"counters":{\([^}]*\)}.*/\1/p'                         # 两处的 total 必须相等
 curl -s -o /dev/null -w 'anon-counters=%{http_code}\n' $BASE/api/entries/counters                               # 401
 
+# 16.6) 批量订阅（F16，第 25 节；与 smoke.sh 的 F16 段同一套断言，见 [smoke.sh:511-563](../backend/smoke.sh#L511)）
+#   这段粘贴一次考满拆分器的四种读法：`名字: 地址` × 逗号并列、回车、内网地址、非 http 协议、整行读不懂
+BODY=smoke-batch.json                                                          # 落在当前目录，跑完手工 rm
+printf '{"text":"甲: http://127.0.0.1:19999/feed.xml?b=1, http://127.0.0.1:19999/feed.xml?b=2\\nhttp://192.168.9.9/in.rss\\nftp://127.0.0.1:19999/f\\n见备注","group":"批量"}' > $BODY
+B=$(curl -s -b $J $BASE/api/feeds | grep -o '"id":' | wc -l)                                                     # 写之前的订阅数
+curl -s -b $J -c $J -H "X-XSRF-TOKEN: $TOK" -H 'Content-Type: application/json' -X POST $BASE/api/feeds/batch/plan \
+  --data-binary @$BODY | sed -n 's/.*"ready":\([0-9]*\).*/ready=\1/p'                                             # ready=2：只有两条可加
+#   同一份响应里还应有 "status":"refused" + private_target、"reason":"scheme_not_allowed"、"address":"见备注"
+curl -s -b $J $BASE/api/feeds | grep -o '"id":' | wc -l                                                           # 仍是 $B：plan 一行都不写
+curl -s -b $J -c $J -H "X-XSRF-TOKEN: $TOK" -H 'Content-Type: application/json' -X POST $BASE/api/feeds/batch \
+  --data-binary @$BODY | sed -n 's/.*"added":\([0-9]*\).*/added=\1/p'                                             # added=2
+curl -s -b $J "$BASE/api/feeds" | grep -c '"customTitle":"甲"'                                                    # 1：名字写在地址前面就成了订阅名（GET /api/feeds 没有过滤参数，整表里数）
+sleep 12; curl -s -b $J "$BASE/api/feeds" | grep -c '"lastHttpStatus":200'                                        # ≥1：错开 10 s 抓取，批量不发请求也能入库
+curl -s -b $J -c $J -H "X-XSRF-TOKEN: $TOK" -H 'Content-Type: application/json' -X POST $BASE/api/feeds/batch/plan \
+  --data-binary @$BODY | grep -o '"reason":"already_subscribed"' | wc -l                                          # 2：第二次整批都是重复，仍返回 200
+BIG=smoke-batch-big.json; { printf '{"text":"'; for _i in $(seq 1 201); do printf 'http://127.0.0.1:19999/feed.xml?n=%s\\n' "$_i"; done; printf '"}'; } > $BIG
+curl -s -b $J -c $J -H "X-XSRF-TOKEN: $TOK" -H 'Content-Type: application/json' -X POST $BASE/api/feeds/batch \
+  --data-binary @$BIG -o /dev/null -w 'cap=%{http_code}\n'                                                        # 400：超 200 条整批拒绝，不写半批
+curl -s -o /dev/null -w 'anon-batch=%{http_code}\n' -H 'Content-Type: application/json' -X POST \
+  $BASE/api/feeds/batch --data-binary @$BODY | cut -c1                                                            # 4：匿名写先撞 CsrfFilter（TC-SUB-72）
+rm -f $BODY $BIG
+
 # 17) 登出后复用（TC-AUTH-10/11）
 curl -s -o /dev/null -w 'logout=%{http_code}\n' -b $J -H "X-XSRF-TOKEN: $TOK" -X POST $BASE/api/auth/logout
 curl -s -o /dev/null -w 'after-logout=%{http_code}\n' -b $J $BASE/api/feeds
@@ -1654,7 +1801,7 @@ curl -s -o /dev/null -w 'after-logout=%{http_code}\n' -b $J $BASE/api/feeds
 | 2 导航 | `NAV` | 7 | 0 |
 | 3 收件箱 | `INB` | 46 | 19 |
 | 4 阅读面板 | `RDR` | 19 | 10 |
-| 5 订阅管理 | `SUB` | 56 | 33 |
+| 5 + 25.2 + 25.3 订阅管理（含 F16 批量：61…72 接口 / 73…82 按钮） | `SUB` | 78 | 50 |
 | 6 健康度 | `HEA` | 16 | 7 |
 | 7 文章编辑 | `PST` | 37 | 25 |
 | 8 公开出口 | `PUB` | 35 | 23 |
@@ -1667,13 +1814,16 @@ curl -s -o /dev/null -w 'after-logout=%{http_code}\n' -b $J $BASE/api/feeds
 | 21 聚合再分发（M5） | `RPL` | 17 | 14 |
 | 22 变更公告（F1.6） | `CHG` | 22 | 9 |
 | 24.3 界面令牌与外壳（F12 立，F13 重写，F14 加三条"框架在哪里取色"） | `UIF` | 13 | 10 |
-| — | 合计 | **427** | **257** |
+| 25.1 粘贴拆分器（F16） | `SBP` | 12 | 6 |
+| — | 合计 | **461** | **280** |
 
-> 计数由机器实测得出（2026-11-02 第十一轮 F15 之后）。**口径改用严格式**：`grep -cE '^\| TC-[A-Z]+-[0-9]+[a-z]? \| P[012] \|' doc/test-plan.md` = **427** 行，P0 列同法 = **257**，按精确编号 `sort | uniq -d` **无重复**（`TC-AUTH-20` 与 `TC-AUTH-20b` 是两条，别用前缀匹配去重）。
+> 计数由机器实测得出（2026-11-03 第十二轮 F16 之后）。**口径仍是严格式**：`grep -cE '^\| TC-[A-Z]+-[0-9]+[a-z]? \| P[012] \|' doc/test-plan.md` = **461** 行，P0 列同法 = **280**。查重也限定义行，别对全文编号做 `uniq -d`：`grep -oE '^\| TC-[A-Z]+-[0-9]+[a-z]? \| P[012] \|' doc/test-plan.md | awk -F'|' '{print $2}' | sort | uniq -d` **零输出**（461 行 ↔ 461 个不同编号）。全文去重会假报 6 条（`TC-NAV-01/02/04`、`TC-UIF-01/02/07`），那是 24.5/24.6 的实录表在行首复述既有编号——它们是引用，不是第二条用例。`TC-AUTH-20` 与 `TC-AUTH-20b` 是两条，别用前缀匹配去重。
 >
-> 为什么换口径：宽松式 `grep -cE '^\| TC-[A-Z]+-[0-9]+[a-z]?'` 现在会数到 **441**——24.5/24.6/24.7/24.8 四节"执行实录"里的说明表也在行首复述用例编号（如 24.8 的"TC-PUB-40/41/42 的 `[C]`"行），那些不是用例行。严格式多要求"下一列必须是 P0/P1/P2"，只命中真表；以后加实录表不会再污染计数。
+> 为什么换口径：宽松式 `grep -cE '^\| TC-[A-Z]+-[0-9]+[a-z]?'` 现在会数到 **468**——24.5/24.6/24.7/24.8/25.4 五节"执行实录"里的说明表也在行首复述用例编号（如 24.8 的"TC-PUB-40/41/42 的 `[C]`"行），那些不是用例行。严格式多要求"下一列必须是 P0/P1/P2"，只命中真表；以后加实录表不会再污染计数。
 >
-> 本轮（F15）新增一条：TC-RUL-20（单条规则 `GET /api/rules/{id}` 的正向逐字段断言，P1），故 `RUL` 由 19 条/13 P0 变为 **20 条/13 P0**、合计 426 → **427**（P0 不动）。此外先前两轮数错的格子仍按第九轮勘误保留：第 20 节 `DSH`/`SET`/`SYS` 的 P0 是 **27**（DSH 17 + SET 6 + SYS 4）；第 24.3 节 `UIF` 是 **13 条/10 P0**。逐前缀机器实测：AUTH 23/15 · INB 46/19 · RDR 19/10 · NAV 7/0 · SUB 56/33 · HEA 16/7 · PST 37/25 · PUB 35/23 · FET 25/17 · API 11/5 · SEC 12/9 · MIG 4/2 · RUL 20/13 · NTF 7/3 · EVT 12/9 · TOT 9/7 · DSH 20/17 · SET 9/6 · SYS 7/4 · RPL 17/14 · CHG 22/9 · UIF 13/10 = **427/257**。旧版"249"是 M1 末口径、"331/194"是 M3.5、"348/208"是 M5、"370/217"是 F1.6、"390/228"是 F2.4、"423/255"是 F12、"426/257"是 F13/F14，均已过时。
+> 本轮（F16）新增 34 条：`SBP` 12 条/6 P0（拆分器，全 `[自]`）+ `SUB` 22 条/17 P0（12 条接口 + 10 条按钮），合计 427 → **461**、P0 257 → **280**。`SUB` 前缀整体实测 **78 条/50 P0**（第 5 节的 56/33 加 25.2 的 12/7 加 25.3 的 10/10）。此外先前几轮数错的格子仍按第九轮勘误保留：第 20 节 `DSH`/`SET`/`SYS` 的 P0 是 **27**（DSH 17 + SET 6 + SYS 4）；第 24.3 节 `UIF` 是 **13 条/10 P0**。逐前缀机器实测：AUTH 23/15 · INB 46/19 · RDR 19/10 · NAV 7/0 · SUB 78/50 · SBP 12/6 · HEA 16/7 · PST 37/25 · PUB 35/23 · FET 25/17 · API 11/5 · SEC 12/9 · MIG 4/2 · RUL 20/13 · NTF 7/3 · EVT 12/9 · TOT 9/7 · DSH 20/17 · SET 9/6 · SYS 7/4 · RPL 17/14 · CHG 22/9 · UIF 13/10 = **461/280**。旧版"249"是 M1 末口径、"331/194"是 M3.5、"348/208"是 M5、"370/217"是 F1.6、"390/228"是 F2.4、"423/255"是 F12、"426/257"是 F13/F14、"427/257"是 F15，均已过时。
+>
+> 撞号事故与修法记在 25.4：`SubscriptionBatchApiTest` 的 `@DisplayName` 一度占用 `TC-SUB-01…12`，与第 5 节同号，测试侧已整体改为 `TC-SUB-61…72`；**编号是先占先得的资源，落笔前先 `grep -oE 'TC-[A-Z]+-[0-9]+' doc/test-plan.md | sort -u | tail`**。
 
 另有第 12 节 12 条阻塞项（不设为用例）、第 13 节 7 条口径差异（先裁定再测）。
 

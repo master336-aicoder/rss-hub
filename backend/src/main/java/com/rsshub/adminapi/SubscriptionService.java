@@ -2,6 +2,7 @@ package com.rsshub.adminapi;
 
 import com.rsshub.adminapi.Opml.Parsed;
 import com.rsshub.common.ApiException;
+import com.rsshub.common.SsrfBlockedException;
 import com.rsshub.feedfetch.FeedDiscoverer;
 import com.rsshub.feedfetch.FeedDiscoverer.Discovery;
 import com.rsshub.feedfetch.FeedFetchRepository;
@@ -13,6 +14,7 @@ import com.rsshub.feedstore.FeedRepository.AdminFeed;
 import com.rsshub.feedstore.FeedRepository.Subscription;
 import com.rsshub.security.SsrfGuard;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +52,13 @@ public class SubscriptionService {
     /** The whole of what a subscription patch may ask for. Anything else is refused, so the address cannot be in it. */
     private static final Set<String> EDITABLE_FIELDS = Set.of("title", "group", "state", "intervalMinutes");
 
+    /**
+     * How many addresses one paste may yield. The cap is not about the database — it is about the request that would
+     * otherwise resolve several hundred hostnames before it answered, and about an operator pasting a whole link dump
+     * when they meant to subscribe to a newsletter.
+     */
+    private static final int MAX_BATCH_ITEMS = 200;
+
     private final FeedRepository feeds;
     private final FeedFetchRepository fetchFeeds;
     private final FeedDiscoverer discoverer;
@@ -70,6 +79,32 @@ public class SubscriptionService {
 
     /** What an OPML import did. Skipped URLs are counted, never listed: an import of 200 feeds is not a log line. */
     public record ImportResult(int imported, int skipped) {
+    }
+
+    /**
+     * One line of a paste, as the splitter read it. {@code url} is null for a line that never became an address;
+     * {@code reason} is the problem code an operator can paste into an issue, and is null when the line is clean.
+     *
+     * <p>{@code status} is one of {@code ready}, {@code duplicate}, {@code refused}, {@code invalid}, and — only
+     * from the write — {@code added}. The three non-ready kinds answer three different questions, and collapsing them
+     * would make a paste look rejected for the wrong reason: {@code refused} means this install's SSRF rule said no
+     * (the address may be perfectly real), {@code invalid} means the text is not an address at all, and
+     * {@code duplicate} means the subscription already exists, which is the one outcome that is not a mistake.
+     */
+    public record PlanItem(int lineNo, String label, String address, String url, String status, String reason) {
+
+        /** Only a line the guard cleared and the list does not already hold gets written. */
+        boolean writable() {
+            return "ready".equals(status);
+        }
+    }
+
+    /** The read-only answer to "what would this paste do", plus how many rows the write would create. */
+    public record BatchPlan(List<PlanItem> items, int ready) {
+    }
+
+    /** The write's answer: the same lines, each now carrying the verdict that was actually applied. */
+    public record BatchResult(int added, List<PlanItem> items) {
     }
 
     /**
@@ -106,6 +141,115 @@ public class SubscriptionService {
         log.info("subscribed feed {} to {}", id, canonical);
         return feeds.findAdmin(id).orElseThrow(
             () -> ApiException.notFound("feed_not_found", "The subscription disappeared while it was being added"));
+    }
+
+    /**
+     * Reads a paste and says what each line would become, without writing anything.
+     *
+     * <p>It exists because a batch write cannot be undone with an undo button: the operator has to see the split
+     * before committing to it — including the lines the splitter read differently than they meant. No fetch runs
+     * here; the guard does resolve each host, which is the same check an interactive add does before it touches the
+     * network.
+     */
+    public BatchPlan planBatch(String text) {
+        List<PlanItem> items = classify(text);
+        return new BatchPlan(items, (int) items.stream().filter(PlanItem::writable).count());
+    }
+
+    /**
+     * Subscribes every {@code ready} line of a paste.
+     *
+     * <p>The text is re-split here rather than taken from a plan the client already saw, so the plan is a preview and
+     * not an instruction: a caller cannot rename a line into an address the guard never checked, and a subscription
+     * that appeared between the two calls shows up as a duplicate instead of a second row.
+     *
+     * <p>Like an OPML import, no discovery runs per line — an operator pasting fifty site addresses would otherwise
+     * wait for fifty round trips, and one unreachable host would hold the whole request. The address is stored as
+     * both requested and canonical, and if it turns out to be a page rather than a feed the first fetch says so on
+     * the health column with {@code not_a_feed}; the fix is the single-address 解析 button, not this one.
+     */
+    @Transactional
+    public BatchResult addBatch(String text, String group) {
+        List<PlanItem> items = classify(text);
+        List<PlanItem> written = new ArrayList<>(items.size());
+        Instant now = Instant.now();
+        String folder = blankToNull(group);
+        int added = 0;
+        for (PlanItem item : items) {
+            if (!item.writable()) {
+                written.add(item);
+                continue;
+            }
+            long id = feeds.create(item.url(), item.url(), folder);
+            if (item.label() != null) {
+                feeds.update(id, null, null, item.label(), null);
+            }
+            // Staggered by position, exactly as an import is: a paste of two hundred feeds must not open two
+            // hundred sockets at once, and the first one is due immediately so the panel starts filling in.
+            queue.enqueue("fetch", FetchQueueSeeder.dedupeKey(id), id, now.plusSeconds(added * 10L));
+            added++;
+            written.add(new PlanItem(item.lineNo(), item.label(), item.address(), item.url(), "added",
+                item.reason()));
+        }
+        if (added > 0) {
+            wakeAfterCommit();
+        }
+        log.info("batch subscribe: {} added, {} skipped of {} lines", added, items.size() - added, items.size());
+        return new BatchResult(added, written);
+    }
+
+    /**
+     * The one reading of a paste, shared by the preview and the write so the two can never disagree about what a
+     * line meant — only about whether the rows exist yet, which is why an address already in the list is a
+     * {@code duplicate} here and an {@code already_subscribed} conflict for a single add.
+     */
+    private List<PlanItem> classify(String text) {
+        List<PastedSubscriptions.Candidate> candidates = PastedSubscriptions.split(text);
+        if (candidates.isEmpty()) {
+            throw ApiException.badRequest("nothing_to_add", "No address found in that text");
+        }
+        if (candidates.size() > MAX_BATCH_ITEMS) {
+            throw ApiException.badRequest("too_many_lines",
+                "A paste is read as at most " + MAX_BATCH_ITEMS + " addresses; split it into smaller batches");
+        }
+        List<PlanItem> items = new ArrayList<>(candidates.size());
+        Set<String> seen = new LinkedHashSet<>();
+        for (PastedSubscriptions.Candidate candidate : candidates) {
+            String label = blankToNull(candidate.label());
+            if (label != null && label.length() > MAX_TITLE_LENGTH) {
+                items.add(new PlanItem(candidate.lineNo(), label.substring(0, MAX_TITLE_LENGTH),
+                    candidate.address(), null, "invalid",
+                    "the title alone is longer than " + MAX_TITLE_LENGTH + " characters"));
+                continue;
+            }
+            String url;
+            try {
+                url = normalise(candidate.address());
+            } catch (ApiException e) {
+                items.add(new PlanItem(candidate.lineNo(), label, candidate.address(), null, "invalid", e.code()));
+                continue;
+            }
+            try {
+                guard.validate(url);
+            } catch (SsrfBlockedException e) {
+                items.add(new PlanItem(candidate.lineNo(), label, candidate.address(), url, "refused", e.reason()));
+                continue;
+            } catch (RuntimeException e) {
+                items.add(new PlanItem(candidate.lineNo(), label, candidate.address(), url, "invalid", "malformed_url"));
+                continue;
+            }
+            String status = "ready";
+            String reason = null;
+            if (!seen.add(url)) {
+                status = "duplicate";
+                reason = "already_in_paste";
+            } else if (feeds.urlExists(url)) {
+                status = "duplicate";
+                reason = "already_subscribed";
+            }
+            items.add(new PlanItem(candidate.lineNo(), label, candidate.address(), url, status, reason));
+        }
+        return items;
     }
 
     /**
@@ -193,14 +337,19 @@ public class SubscriptionService {
         armNow(id);
     }
 
-    /**
-     * Puts this feed's work at the front of the queue and asks for a round now rather than at the scheduler's next
-     * tick. The wake is deferred to after commit because the row this method just wrote is not yet visible to the
-     * dispatcher's own connection: waking inside the transaction would scan a queue that still looks empty, and the
-     * feed would sit until the fifteen-second round anyway — which is the delay this exists to remove.
-     */
+    /** Puts this feed's work at the front of the queue and asks for a round now rather than at the next tick. */
     private void armNow(long feedId) {
         queue.armNow("fetch", FetchQueueSeeder.dedupeKey(feedId), feedId, Instant.now());
+        wakeAfterCommit();
+    }
+
+    /**
+     * Asks the dispatcher for a round as soon as this transaction lands. The wake is deferred because the queue rows
+     * written moments ago are not yet visible to the dispatcher's own connection: waking inside the transaction would
+     * scan a queue that still looks empty, and the feed would sit until the fifteen-second round anyway — which is the
+     * delay this exists to remove.
+     */
+    private void wakeAfterCommit() {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override

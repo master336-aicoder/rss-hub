@@ -243,7 +243,7 @@ H2 官方口径：**进程持有文件库时直接复制 `.mv.db` 是不安全�
 - [ ] 大屏 `/api/dashboard` 一次返回 KPI + 直方图 + 卡片墙 + 三条 rail；`entries` 与 `/api/entries/counters.total` 相等。
 - [ ] 备份任务已在系统里排上（cron/systemd timer），并真的产出过一个可恢复的文件。
 - [ ] `RSSHUB_SECRET_KEY` 已进备份；`backend/dev.env`、任何 `.env` 不在版本库里。
-- [ ] 上线的这份代码在**它自己的机器**上跑过三条门禁：`cd backend && ./mvnw -o -B -ntp verify`（397 项 / 38 类）、`bash .dev-logs/smoke-run.sh <tag>`（205 项真 HTTP `ALL PASS`，一次性库与一次性口令）、`cd web && npm run build`（`vue-tsc --noEmit` 0 错误）。用例册口径见 [test-plan.md](./test-plan.md) §24.8。
+- [ ] 上线的这份代码在**它自己的机器**上跑过三条门禁：`cd backend && ./mvnw -o -B -ntp verify`（421 项 / 40 类）、`bash .dev-logs/smoke-run.sh <tag>`（222 项真 HTTP `ALL PASS`，一次性库与一次性口令）、`cd web && npm run build`（`vue-tsc --noEmit` 0 错误）。用例册口径见 [test-plan.md](./test-plan.md) §25.4。
 
 ---
 

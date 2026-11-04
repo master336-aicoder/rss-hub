@@ -12,7 +12,7 @@
 
 | 面 | 交付内容 |
 |---|---|
-| 订阅消费 | 收件箱（未读/已读/收藏/丢弃四态、`j k n s m` 键盘流、按分组/订阅/告警/分类过滤、桌面通知与 60 秒未读轮询）、阅读器面板、订阅管理（解析候选→就地编辑标题/分组/状态/抓取间隔，**URL 不可改**、立即抓取当轮执行、OPML 导入导出）、健康度页 |
+| 订阅消费 | 收件箱（未读/已读/收藏/丢弃四态、`j k n s m` 键盘流、按分组/订阅/告警/分类过滤、桌面通知与 60 秒未读轮询）、阅读器面板、订阅管理（解析候选→就地编辑标题/分组/状态/抓取间隔，**URL 不可改**、立即抓取当轮执行、**批量订阅**：粘一段清单按逗号/分号/顿号/空格/回车拆成多条，冒号只在不是协议也不是端口时才拆，先预览逐行判决再写入、OPML 导入导出）、健康度页 |
 | 抓取 | 定时轮询 + 条件请求（ETag / Last-Modified → 304）、抖动与按主机间隔、失败退避、SSRF 拦截（私网/回环/链路本地/元数据地址默认拒绝）、原始响应落盘 30 天 |
 | 内容发布 | 站内文章（Markdown、草稿/定时/发布/撤回、标签与分类）、站点 feed `/feed.{rss,atom,json}`、标签切片 `/tag/{slug}.{format}`、分类切片 `/category/{slug}.{format}`、人类可读页 `/blog/{slug}`（带 `<link rel="alternate">` 发现块）、变更公告 `/feed/changelog.{format}` + `GET /api/changelog` |
 | 事件与告警 | 事件源（`POST /api/ingest/events`，Bearer 令牌 + `dedupeKey` 幂等）、事件 feed `/feed/{slug}.{format}` 与详情页 `/event/{slug}/{publicId}`、关键词规则（匹配/抑制/静默时段/命中计数）、投递通道与重试阶梯、投递日志与重放 |
@@ -59,15 +59,15 @@ bash start-dev.sh          # bash start-dev.sh status / stop
 ## 4. 测试与验收
 
 ```bash
-cd backend && ./mvnw -o -B -ntp verify          # 397 项单测/集成测试，38 个测试类
+cd backend && ./mvnw -o -B -ntp verify          # 421 项单测/集成测试，40 个测试类
 cd web && npm run build                          # vue-tsc --noEmit 0 错误 + vite 构建
-bash .dev-logs/smoke-run.sh <tag>                # 一次性实例 + 一次性库 + 临时口令，205 项真 HTTP 断言
+bash .dev-logs/smoke-run.sh <tag>                # 一次性实例 + 一次性库 + 临时口令，222 项真 HTTP 断言
 ```
 
 `smoke-run.sh` 会自己造口令（只存在于该次 shell 环境），**永远不要**拿开发库 `backend/data/rss-hub.mv.db` 做功能测试。
-用例册与验收口径在 [doc/test-plan.md](doc/test-plan.md)：427 条用例（257 条 P0），按 `[自] / [机] / [C] / [B]` 四档标注——`[自]` 由 `./mvnw verify` 的单元/集成测试，`[机]` 由构建产物或 grep 断言，`[C]` 由冒烟脚本打真 HTTP，`[B]` 只能人工在浏览器里验。
+用例册与验收口径在 [doc/test-plan.md](doc/test-plan.md)：461 条用例（280 条 P0），按 `[自] / [机] / [C] / [B]` 四档标注——`[自]` 由 `./mvnw verify` 的单元/集成测试，`[机]` 由构建产物或 grep 断言，`[C]` 由冒烟脚本打真 HTTP，`[B]` 只能人工在浏览器里验。
 
-当前自动化门禁的实测值：397 项测试全绿、205 项冒烟 `ALL PASS`、`.vue` 硬编码色值 0 处、全套文档 `file#L` 引用 963 条零越界、路由引用漂移审计（`.dev-logs/f15-routecheck.js`）54 条核对 0 条漂移。**登录后的 11 个界面仍未在浏览器逐屏复核**，这条限制记录在 [03 §14 O24](doc/design/03-technical-design.md) 与用例册 §24.8。
+当前自动化门禁的实测值（2026-11-03 F16 之后）：421 项测试全绿、222 项冒烟 `ALL PASS`、`.vue` 硬编码色值 0 处、全套文档 `file#L` 引用 1059 条零缺失零越界、路由引用漂移审计（`.dev-logs/f15-routecheck.js`）57 条核对 0 条漂移。**登录后的界面仍未在浏览器逐屏复核**（含 F16 的批量面板），这条限制记录在 [03 §14 O24/O26](doc/design/03-technical-design.md) 与用例册 §24.8、§25.4。
 
 ---
 
@@ -91,7 +91,7 @@ bash .dev-logs/smoke-run.sh <tag>                # 一次性实例 + 一次性�
 ```
 backend/          Spring Boot 应用（src/main/java/com/rsshub/{feedparse,feedfetch,feedstore,adminapi,
                   feedrender,editorial,events,rules,notify,repack,changelog,settings,security,...}）
-                  smoke.sh —— 真 HTTP 冒烟序列；src/test/java —— 38 个测试类
+                  smoke.sh —— 真 HTTP 冒烟序列；src/test/java —— 40 个测试类
 web/              Vue 3 控制台（src/views 12 个页面 + src/components + src/api + src/styles/theme.css）
 doc/              rss-guide.md / rss-quickref.md（RSS 规范与速查）、test-plan.md（用例册）、deploy.md
 doc/design/       01 需求 · 02 架构 · 03 技术设计 · 04 产研计划（含每个里程碑的实际执行记录）

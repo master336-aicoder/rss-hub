@@ -133,4 +133,30 @@ public class FeedController {
             .sorted()
             .toList();
     }
+
+    /**
+     * What a paste looks like on the wire. One {@code group} for the whole batch, because a list copied out of a
+     * folder is one folder; the per-line label carried in front of an address is the only other name a line gets.
+     */
+    public record BatchRequest(@NotBlank String text, String group) {
+    }
+
+    /**
+     * Reads a paste and reports what every line would become, writing nothing. Separate from the write for the same
+     * reason discovery is: a batch that is refused halfway must not have created twelve subscriptions on the way.
+     */
+    @PostMapping("/batch/plan")
+    public SubscriptionService.BatchPlan planBatch(@Valid @RequestBody BatchRequest request) {
+        return subscriptions.planBatch(request.text());
+    }
+
+    /**
+     * Subscribes every line the plan said was ready. 200 rather than 201 — a paste that lands 18 of 20 lines is a
+     * success with a list of what it skipped, and the per-line verdicts are the only way an operator can tell a
+     * duplicate apart from a refusal.
+     */
+    @PostMapping("/batch")
+    public SubscriptionService.BatchResult addBatch(@Valid @RequestBody BatchRequest request) {
+        return subscriptions.addBatch(request.text(), request.group());
+    }
 }

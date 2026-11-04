@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { ApiError } from "../api/errors";
-import { feedsApi, feedLabel, OPERATOR_STATES, type Discovery, type Feed } from "../api/feeds";
+import {
+  feedsApi,
+  feedLabel,
+  OPERATOR_STATES,
+  type BatchPlan,
+  type BatchPlanItem,
+  type Discovery,
+  type Feed,
+} from "../api/feeds";
 import { opmlApi, OPML_EXPORT_PATH, type ImportResult } from "../api/opml";
 import { useFeedsStore } from "../stores/feeds";
 import { ago } from "../utils/time";
@@ -172,6 +180,106 @@ async function onImport(event: Event) {
     input.value = "";
   }
 }
+
+/**
+ * Batch subscribe (F16). Its own state and its own alert box, because the two write paths answer different
+ * questions: the single add asks "is this the right feed?" and the batch asks "how did you read these twenty lines?".
+ */
+const batchOpen = ref(false);
+const batchText = ref("");
+const batchGroup = ref("");
+const batchPlan = ref<BatchPlan | undefined>(undefined);
+const batchBusy = ref(false);
+const batchMessage = ref("");
+const batchFailed = ref(false);
+
+/** Mirrors {@code SubscriptionService.MAX_BATCH_ITEMS}, so the box states its own limit before the server has to. */
+const BATCH_LIMIT = 200;
+
+const batchLines = computed(() => batchText.value.split(/\r\n|\r|\n/).filter((line) => line.trim() !== "").length);
+
+/** The five verdicts the backend sends, in the words the table shows. The raw `reason` stays next to them. */
+const BATCH_STATUS: Record<string, { label: string; pill: string }> = {
+  ready: { label: "可添加", pill: "text-bg-primary" },
+  added: { label: "已添加", pill: "text-bg-success" },
+  duplicate: { label: "重复", pill: "text-bg-secondary" },
+  refused: { label: "被拒绝", pill: "text-bg-warning" },
+  invalid: { label: "读不懂", pill: "text-bg-danger" },
+};
+
+function batchStatus(item: BatchPlanItem): { label: string; pill: string } {
+  return BATCH_STATUS[item.status] ?? { label: item.status, pill: "text-bg-secondary" };
+}
+
+function batchPass(text: string): string {
+  batchFailed.value = false;
+  return text;
+}
+
+function batchFail(text: string): string {
+  batchFailed.value = true;
+  return text;
+}
+
+/** The F10 rule, applied to the paste box: a new text invalidates the last reading of the old one. */
+function resetBatchPlan(): void {
+  batchPlan.value = undefined;
+  batchMessage.value = "";
+  batchFailed.value = false;
+}
+
+watch(batchText, resetBatchPlan);
+
+const batchReady = computed(() => batchPlan.value?.ready ?? 0);
+
+/** Reads the paste without writing it, so an operator sees the split before committing to twenty subscriptions. */
+async function parseBatch() {
+  batchBusy.value = true;
+  resetBatchPlan();
+  try {
+    const found = await feedsApi.batchPlan(batchText.value);
+    batchPlan.value = found;
+    const skipped = found.items.length - found.ready;
+    batchMessage.value = found.ready
+      ? batchPass(
+          `读到 ${found.items.length} 条，可添加 ${found.ready} 条` +
+            (skipped ? `，${skipped} 条不会写入（下表说明了原因）` : ""),
+        )
+      : batchFail(`读到 ${found.items.length} 条，没有一条可以添加（下表说明了原因）`);
+  } catch (error) {
+    batchMessage.value = batchFail(describe(error));
+  } finally {
+    batchBusy.value = false;
+  }
+}
+
+/**
+ * Writes the paste. The backend re-reads the text rather than trusting the table above, so what lands is what the
+ * lines say now — including lines that became duplicates since the preview. A paste that added nothing keeps its text
+ * in the box, because the next thing to do is fix the lines the table says were refused, not type the list again.
+ */
+async function applyBatch() {
+  batchBusy.value = true;
+  try {
+    const result = await feedsApi.batchAdd(batchText.value, batchGroup.value.trim() || undefined);
+    const skipped = result.items.length - result.added;
+    if (result.added > 0) {
+      batchText.value = "";
+      batchPlan.value = undefined;
+      batchMessage.value = batchPass(
+        `已订阅 ${result.added} 条` + (skipped ? `，${skipped} 条跳过` : "") + "，正在按顺序抓取",
+      );
+    } else {
+      batchPlan.value = { items: result.items, ready: 0 };
+      batchMessage.value = batchFail(`没有新订阅写入，${skipped} 条已存在或被拒绝`);
+    }
+    await feeds.load();
+  } catch (error) {
+    batchMessage.value = batchFail(describe(error));
+  } finally {
+    batchBusy.value = false;
+  }
+}
 </script>
 
 <template>
@@ -239,6 +347,91 @@ async function onImport(event: Event) {
           role="status">
           <i class="bi me-1" :class="failed ? 'bi-exclamation-circle' : 'bi-check-circle'" aria-hidden="true"></i>
           {{ message }}
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between gap-2 py-2">
+        <span class="small fw-semibold d-flex align-items-center gap-2">
+          <i class="bi bi-clipboard2-plus text-primary" aria-hidden="true"></i>批量订阅
+        </span>
+        <div class="d-flex align-items-center gap-2">
+          <span v-if="!batchOpen && batchText" class="small text-body-secondary text-truncate">
+            已粘贴 {{ batchLines }} 行
+          </span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" :aria-expanded="batchOpen"
+            @click="batchOpen = !batchOpen">
+            {{ batchOpen ? "收起" : "展开" }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="batchOpen" class="card-body">
+        <label class="form-label small text-body-secondary mb-1" for="batch-text">一次粘贴多个地址</label>
+        <textarea id="batch-text" v-model="batchText" class="form-control font-monospace" rows="5"
+          placeholder="每行一个地址，也支持 , ; 、 空格 分隔&#10;地址前的名字会成为订阅标题：阮一峰: https://www.ruanyifeng.com/blog/atom.xml"></textarea>
+        <p class="small text-body-secondary mb-2 mt-2">
+          分隔符：逗号、分号、顿号、空格与回车；冒号只在不是协议（<code>://</code>）也不是端口（<code>:8443</code>）时拆开，
+          拆开后的前半截当作这条订阅的名字。一次最多 {{ BATCH_LIMIT }} 条。批量订阅不会解析页面，粘贴网页地址会得到
+          <code>not_a_feed</code>，请改用上面的“解析”。
+        </p>
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-4">
+            <label class="form-label small text-body-secondary mb-1" for="batch-group">这批放进的分组</label>
+            <input id="batch-group" v-model="batchGroup" class="form-control" placeholder="分组（可选）"
+              aria-label="批量分组">
+          </div>
+          <div class="col-12 col-md-auto d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" :disabled="batchBusy || !batchText"
+              @click="parseBatch">
+              <span v-if="batchBusy" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              <i v-else class="bi bi-search me-1" aria-hidden="true"></i>解析
+            </button>
+            <button type="button" class="btn btn-primary" :disabled="batchBusy || batchReady === 0"
+              @click="applyBatch">
+              添加 {{ batchReady }} 条
+            </button>
+            <button type="button" class="btn btn-outline-secondary" :disabled="batchBusy || !batchText"
+              @click="batchText = ''">清空</button>
+          </div>
+        </div>
+
+        <div v-if="batchPlan" class="table-responsive border rounded bg-body-tertiary mt-3">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="small">行</th>
+                <th class="small">名称</th>
+                <th class="small">地址</th>
+                <th class="small">结果</th>
+                <th class="small">说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, index) in batchPlan.items" :key="`${item.lineNo}-${index}`">
+                <td class="small text-body-secondary">{{ item.lineNo }}</td>
+                <td class="small">{{ item.label ?? "—" }}</td>
+                <td class="small text-break">
+                  <code>{{ item.address }}</code>
+                  <span v-if="item.url && item.url !== item.address" class="d-block text-body-tertiary">
+                    → {{ item.url }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge rounded-pill" :class="batchStatus(item).pill">{{ batchStatus(item).label }}</span>
+                </td>
+                <td class="small text-body-secondary">{{ item.reason ?? "" }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div v-if="batchMessage" class="alert py-2 small mt-3 mb-0"
+          :class="batchFailed ? 'alert-danger' : 'alert-success'" role="status">
+          <i class="bi me-1" :class="batchFailed ? 'bi-exclamation-circle' : 'bi-check-circle'"
+            aria-hidden="true"></i>
+          {{ batchMessage }}
         </div>
       </div>
     </div>
